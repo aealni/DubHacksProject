@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+.liquid-ether-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* Canvas and Panel Specific Styles */
+.canvas-container {
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+.panel-content {
+  user-select: none;
+}
+
+.panel-content .scrollable-content {
+  user-select: text;
+}
+
+.no-drag {
+  pointer-events: auto;
+}
+
+/* Scrollable content should allow dragging except near scrollbars */
+.scrollable-content {
+  position: relative;
+}
+
+.scrollable-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Elegant color palette based on color theory */
+@layer utilities {
+  /* Primary text colors - sophisticated grays with optimal contrast */
+  .text-elegant-dark {
+    color: #0a0e13; /* Near-black for headers - maximum contrast */
+  }
+  
+  .text-elegant-medium {
+    color: #1a202c; /* Rich dark gray for subheaders */
+  }
+  
+  .text-elegant-body {
+    color: #1a1a1a; /* Much darker body text - excellent readability */
+  }
+  
+  .text-elegant-strong {
+    color: #0f172a; /* Extra dark for problematic text elements */
+  }
+  
+  .text-elegant-ultra {
+    color: #030712; /* Ultra dark for maximum visibility on white */
+  }
+  
+  .text-elegant-black {
+    color: #000000; /* Pure black for absolute maximum visibility */
+  }
+  
+  .text-elegant-light {
+    color: #374151; /* Secondary text - still quite dark */
+  }
+  
+  .text-elegant-muted {
+    color: #4b5563; /* Muted gray for subtle text */
+  }
+  
+  .text-elegant-subtle {
+    color: #6b7280; /* Light gray for captions */
+  }
+  
+  /* Refined gradient text utilities */
+  .text-gradient-elegant {
+    background: linear-gradient(135deg, #0f1419 0%, #1a202c 50%, #2d3748 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .text-gradient-emerald-refined {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 40%, #059669 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .text-gradient-sophisticated {
+    background: linear-gradient(135deg, #0f1419 0%, #1a202c 30%, #2d3748 70%, #4a5568 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  /* Remove all text shadows for clean aesthetic */
+  .text-clean {
+    text-shadow: none;
+  }
+}

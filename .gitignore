@@ -1,0 +1,161 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python environments
+env/
+venv/
+.venv/
+**/venv/
+**/.venv/
+**/env/
+**/__pycache__/
+ENV/
+env.bak/
+venv.bak/
+.envrc
+
+# Python testing/coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pylint.d/
+.tox/
+.pyre/
+**/.ruff_cache/
+
+# Database files (SQLite)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+app.db
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# File uploads
+uploads/*
+!uploads/.gitkeep
+
+# Node.js
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Lock files (keep package-lock.json, remove others)
+yarn.lock
+pnpm-lock.yaml
+
+# Next.js
+.next/
+out/
+**/.next/
+**/out/
+.vercel
+
+# IDE files
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.fuse_hidden*
+.Trash-*
+.nfs*
+
+# Logs
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+temp_*
+
+# Archives
+*.tar
+*.zip
+*.rar
+*.gz
+*.7z
+
+# Coverage and test reports
+coverage/
+*.cover
+*.spec
+*.out
+
+# Runtime data
+pids/
+
+# Optional caches
+.npm
+.eslintcache
+.stylelintcache
+.parcel-cache
+tsconfig.tsbuildinfo
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Secrets and keys
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
