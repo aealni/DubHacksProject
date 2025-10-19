@@ -31,52 +31,56 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
   const [resizeType, setResizeType] = useState<string>(''); // 'n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, panelX: 0, panelY: 0 });
   const [lastTrainedConfig, setLastTrainedConfig] = useState<{target: string, features: string[]} | null>(null);
+  const [hasManualResize, setHasManualResize] = useState(false);
 
   // Use the expanded state from the panel prop, default to false if not set
   const isExpanded = panel.isExpanded ?? true;
   
   // Function to toggle expand state
   const toggleExpanded = () => {
-    onPanelUpdate(panel.id, { isExpanded: !isExpanded });
+    const nextExpanded = !isExpanded;
+    if (nextExpanded) {
+      setHasManualResize(false);
+    }
+    onPanelUpdate(panel.id, { isExpanded: nextExpanded });
   };
 
   // Calculate optimal panel size based on content
   const calculateOptimalSize = () => {
     if (!isExpanded) {
-      return { width: 320, height: 80 }; // Collapsed size - header only
+      return { width: 300, height: 72 };
     }
-    
-    // Large expanded size to show ALL model configuration
-    let optimalWidth = 700;
-    let optimalHeight = 500;
-    
+
+    let optimalWidth = 540;
+    let optimalHeight = 420;
+
     if (availableColumns.length > 0) {
-      // Space for column selection UI
-      optimalHeight = Math.max(600, optimalHeight + Math.min(100, availableColumns.length * 5));
+      optimalHeight = Math.min(520, optimalHeight + Math.min(80, availableColumns.length * 4));
     }
-    
+
     return { width: optimalWidth, height: optimalHeight };
   };
 
   // Calculate content scale based on panel size vs expanded size
+  const headerHeight = 52;
+
   const getContentScale = () => {
-    const expandedWidth = 700; // Base expanded width
-    const expandedHeight = 500; // Base expanded height
-    
-    // Calculate scale based on width (use the smaller scale to maintain aspect ratio)
+    const expandedWidth = 540;
+    const expandedHeight = 420;
+
     const widthScale = panel.width / expandedWidth;
-    const heightScale = (panel.height - 80) / (expandedHeight - 80); // Account for header height
-    
+    const heightScale = (panel.height - headerHeight) / (expandedHeight - headerHeight);
+
     return Math.min(widthScale, heightScale);
   };
 
   // Auto-resize panel when content changes
   useEffect(() => {
-    if (isExpanded && !isResizing) {
+    if (isExpanded && !isResizing && !hasManualResize) {
       const { width, height } = calculateOptimalSize();
       onPanelUpdate(panel.id, { width, height });
     }
-  }, [isExpanded, availableColumns]);
+  }, [isExpanded, availableColumns, isResizing, hasManualResize, onPanelUpdate, panel.id]);
 
   // Fetch available columns when panel is created or dataset changes
   useEffect(() => {
@@ -282,7 +286,8 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
   const handleResizeStart = (e: React.MouseEvent, type: string) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsResizing(true);
+  setIsResizing(true);
+  setHasManualResize(true);
     setResizeType(type);
     setResizeStart({
       x: e.clientX,
@@ -345,23 +350,24 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
 
   return (
     <div
-      className={`panel-content relative bg-white border border-purple-300 rounded-none shadow-xl overflow-hidden transition-all duration-300 ease-out ${
-        isDragging ? 'opacity-90 shadow-2xl scale-105' : 'shadow-lg'
+      className={`panel-content relative bg-white border border-gray-200 shadow-sm overflow-hidden ${
+        isDragging ? 'opacity-90 shadow-md' : ''
       }`}
       style={{
         width: panel.width,
         height: panel.height,
-        pointerEvents: isDragging ? 'none' : 'auto'
+        pointerEvents: isDragging ? 'none' : 'auto',
+        transition: 'width 0.25s ease, height 0.25s ease'
       }}
     >
       {/* Header - simplified without action buttons */}
-  <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-3 pr-24 rounded-none border-b border-purple-200">
+  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-purple-500 rounded-none shadow-sm"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-gray-500" />
             <div>
-              <h3 className="font-semibold text-gray-800 text-sm">Model Training</h3>
-              <div className="text-xs text-gray-600 mt-1">
+              <h3 className="font-medium text-gray-800 text-sm">Model Training</h3>
+              <div className="text-[11px] text-gray-500 mt-0.5">
                 Dataset: {panel.data?.datasetName || panel.data?.datasetId}
               </div>
             </div>
@@ -371,41 +377,40 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
 
       {/* Content */}
       <div 
-        className="p-4 overflow-y-auto scrollable-content" 
+        className="p-3 overflow-y-auto scrollable-content" 
         style={{ 
           transform: `scale(${getContentScale()})`,
           transformOrigin: 'top left',
           width: `${100 / getContentScale()}%`,
-          height: `calc(${(panel.height - 80) / getContentScale()}px - 48px)`
+          height: `calc(${Math.max(panel.height - headerHeight, 160) / getContentScale()}px)`
         }}
       >
         {isExpanded && (
-          <div className="space-y-6">
-            {/* Header Section with Model Type and Auto-Update Toggle */}
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-none p-4 border border-purple-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-purple-800">Model Configuration</h3>
-                <div className="flex items-center space-x-2">
+          <div className="space-y-4 text-sm text-gray-700">
+            <div className="border border-gray-200 bg-white p-3">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-800">Configuration</h3>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
                   <label className="flex items-center space-x-2 text-sm">
                     <input
                       type="checkbox"
                       checked={autoUpdate}
                       onChange={(e) => setAutoUpdate(e.target.checked)}
-                      className="rounded-none text-purple-600 focus:ring-purple-500"
+                      className="h-3.5 w-3.5 border border-gray-300 text-gray-600 focus:ring-gray-500"
                     />
-                    <span className="text-gray-700">Auto-update</span>
+                    <span>Auto-update</span>
                   </label>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Model Type Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Model Type</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Model Type</label>
                   <select
                     value={modelType}
                     onChange={(e) => setModelType(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full border border-gray-300 bg-white px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
                   >
                     {modelTypes.map((type) => (
                       <option key={type.value} value={type.value}>
@@ -417,11 +422,11 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
 
                 {/* Target Column Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Target Column</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Target Column</label>
                   <select
                     value={targetColumn}
                     onChange={(e) => setTargetColumn(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full border border-gray-300 bg-white px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
                   >
                     <option value="">Select target column...</option>
                     {availableColumns.map((column) => (
@@ -433,34 +438,31 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
             </div>
 
             {/* Feature Selection Section */}
-            <div className="bg-white rounded-none border border-gray-200 p-4">
-              <div className="flex justify-between items-center mb-4">
+            <div className="border border-gray-200 bg-white p-3">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="text-md font-semibold text-gray-800">
-                    Feature Selection
-                  </h4>
-                  <p className="text-sm text-gray-600">
+                  <h4 className="text-sm font-medium text-gray-800">Feature Selection</h4>
+                  <p className="text-xs text-gray-500">
                     {featureColumns.length} of {availableColumns.filter(col => col !== targetColumn).length} features selected
                   </p>
                 </div>
                 <div className="flex space-x-2">
                   <button
                     onClick={handleSelectAllFeatures}
-                    className="px-3 py-1.5 text-xs font-medium bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-none transition-colors"
+                    className="border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
                   >
                     Select All
                   </button>
                   <button
                     onClick={handleClearFeatures}
-                    className="px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-none transition-colors"
+                    className="border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
                   >
                     Clear All
                   </button>
                 </div>
               </div>
               
-              {/* Professional Multi-Column Feature Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-48 overflow-y-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto">
                 {availableColumns
                   .filter(column => column !== targetColumn)
                   .map((column) => {
@@ -470,26 +472,26 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                         key={column}
                         type="button"
                         onClick={() => handleColumnToggle(column)}
-                        className={`group relative flex items-center gap-2 p-3 rounded-none border-2 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+                        className={`group relative flex items-center gap-2 border text-left px-2.5 py-2 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 ${
                           isSelected
-                            ? 'border-purple-500 bg-purple-50 text-purple-800 shadow-sm'
-                            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 text-gray-700'
+                            ? 'border-gray-600 bg-gray-100 text-gray-800'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 text-gray-600'
                         }`}
                         aria-pressed={isSelected}
                       >
-                        <span className="text-sm font-medium truncate" title={column}>
+                        <span className="truncate" title={column}>
                           {column}
                         </span>
                         <span
-                          className={`ml-auto flex h-5 w-5 items-center justify-center rounded-none border transition-colors ${
+                          className={`ml-auto flex h-4 w-4 items-center justify-center ${
                             isSelected
-                              ? 'border-transparent bg-purple-500 text-white'
-                              : 'border-gray-300 bg-white text-transparent'
+                              ? 'bg-gray-700 text-white'
+                              : 'border border-gray-200 bg-white text-transparent'
                           }`}
                           aria-hidden="true"
                         >
                           <svg
-                            className="h-3.5 w-3.5"
+                            className="h-3 w-3"
                             viewBox="0 0 20 20"
                             fill="currentColor"
                           >
@@ -506,30 +508,30 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               </div>
               
               {availableColumns.filter(col => col !== targetColumn).length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No features available. Please select a target column first.</p>
+                <div className="py-6 text-center text-xs text-gray-500">
+                  No features available. Please select a target column first.
                 </div>
               )}
             </div>
 
             {/* X-Axis Selection for Visualization (when multiple features) */}
             {featureColumns.length > 1 && (
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-none p-4 border border-indigo-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Visualization X-Axis (for regression plots)
+              <div className="border border-gray-200 bg-white p-3">
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Visualization X-Axis
                 </label>
                 <select
                   value={selectedXAxis}
                   onChange={(e) => setSelectedXAxis(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-gray-300 bg-white px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
                 >
                   <option value="">Select feature for X-axis...</option>
                   {featureColumns.map((column) => (
                     <option key={column} value={column}>{column}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-600 mt-1">
-                  Choose which feature to plot on the X-axis for regression visualizations
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Choose which feature to plot on the X-axis for regression visualizations.
                 </p>
               </div>
             )}
@@ -539,21 +541,21 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               <button
                 onClick={() => trainModel()}
                 disabled={isTraining || !targetColumn || featureColumns.length === 0}
-                className={`w-full p-4 rounded-none text-sm font-medium transition-colors ${
+                className={`w-full px-3 py-2.5 text-sm font-medium transition-colors ${
                   isTraining || !targetColumn || featureColumns.length === 0
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg'
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-900 text-white hover:bg-gray-700'
                 }`}
               >
                 {isTraining ? (
                   <div className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin rounded-none h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                     <span>Training Model...</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center space-x-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm6 0V9a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m6 0a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                     </svg>
                     <span>Train Model & Create Visualization</span>
                   </div>
@@ -562,25 +564,25 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               
               {/* Model Status */}
               {autoUpdate && (
-                <div className="flex items-center space-x-2 text-xs text-gray-600 bg-blue-50 p-2 rounded-none">
-                  <div className="w-2 h-2 bg-blue-500 rounded-none animate-pulse"></div>
-                  <span>Auto-update enabled - model will retrain when features change</span>
+                <div className="flex items-center gap-2 border border-gray-200 bg-gray-100 px-2.5 py-2 text-[11px] text-gray-600">
+                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-600" />
+                  <span>Auto-update enabled. The model retrains when features change.</span>
                 </div>
               )}
             </div>
 
             {/* Error Display */}
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-none">
-                <div className="flex items-start space-x-2">
+              <div className="border border-gray-400 bg-gray-100 p-3 text-sm text-gray-700">
+                <div className="flex items-start gap-2">
                   <div className="flex-shrink-0">
-                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-red-800">Training Error</h4>
-                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                    <h4 className="text-sm font-medium text-gray-800">Training Error</h4>
+                    <p className="mt-1 text-xs">{error}</p>
                   </div>
                 </div>
               </div>
@@ -592,22 +594,26 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
       {/* Resize handles - smaller and positioned to not overlap content */}
       {/* Corner handles */}
       <div
-        className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize bg-purple-200 opacity-50 hover:opacity-100"
+        className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize"
+        style={{ background: 'transparent' }}
         onMouseDown={(e) => handleResizeStart(e, 'nw')}
         title="Resize from top-left corner"
       />
       <div
-        className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize bg-purple-200 opacity-50 hover:opacity-100"
+        className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize"
+        style={{ background: 'transparent' }}
         onMouseDown={(e) => handleResizeStart(e, 'ne')}
         title="Resize from top-right corner"
       />
       <div
-        className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize bg-purple-200 opacity-50 hover:opacity-100"
+        className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize"
+        style={{ background: 'transparent' }}
         onMouseDown={(e) => handleResizeStart(e, 'sw')}
         title="Resize from bottom-left corner"
       />
       <div
-        className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize bg-purple-200 opacity-50 hover:opacity-100"
+        className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
+        style={{ background: 'transparent' }}
         onMouseDown={(e) => handleResizeStart(e, 'se')}
         title="Resize from bottom-right corner"
       />

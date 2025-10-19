@@ -16,10 +16,10 @@ export const StandardPanelControls: React.FC<StandardPanelControlsProps> = ({
   className = ""
 }) => {
   return (
-    <div className={`flex items-center justify-between bg-gray-50 border-b border-gray-200 px-3 py-2 ${className}`}>
+    <div className={`flex items-center justify-between bg-gray-50 border-b border-gray-200 px-2.5 py-2 ${className}`}>
       <div className="flex items-center space-x-2">
         {title && (
-          <h3 className="text-sm font-semibold text-gray-800 truncate">{title}</h3>
+          <h3 className="text-xs font-medium text-gray-700 truncate uppercase tracking-wide">{title}</h3>
         )}
       </div>
       
@@ -27,11 +27,11 @@ export const StandardPanelControls: React.FC<StandardPanelControlsProps> = ({
         {/* Expand/Collapse Button */}
         <button
           onClick={onToggleExpand}
-          className="p-1 rounded hover:bg-gray-200 transition-colors duration-150"
+          className="inline-flex h-6 w-6 items-center justify-center border border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors"
           title={isExpanded ? "Collapse panel" : "Expand panel"}
         >
           <svg 
-            className="w-4 h-4 text-gray-600" 
+            className="w-3.5 h-3.5" 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
@@ -49,11 +49,11 @@ export const StandardPanelControls: React.FC<StandardPanelControlsProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-red-100 hover:text-red-600 transition-colors duration-150"
+            className="inline-flex h-6 w-6 items-center justify-center border border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors"
             title="Close panel"
           >
             <svg 
-              className="w-4 h-4 text-gray-500" 
+              className="w-3.5 h-3.5" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -107,7 +107,7 @@ export const StandardPanelWrapper: React.FC<StandardPanelWrapperProps> = ({
   };
 
   return (
-    <div className={`bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white border border-gray-200 shadow-sm overflow-hidden ${className}`}>
       <StandardPanelControls
         isExpanded={isExpanded}
         onToggleExpand={handleToggleExpand}
@@ -123,7 +123,7 @@ export const StandardPanelWrapper: React.FC<StandardPanelWrapperProps> = ({
       {/* Collapsed Content */}
       {!isExpanded && (
         <div className="p-3 text-center">
-          <p className="text-xs text-gray-500">Click to expand</p>
+          <p className="text-[11px] uppercase tracking-wide text-slate-400">Expand to view</p>
         </div>
       )}
     </div>
@@ -136,25 +136,25 @@ interface StandardResizeHandlesProps {
 }
 
 export const StandardResizeHandles: React.FC<StandardResizeHandlesProps> = ({ onResizeStart }) => {
-  const handleStyle = "absolute bg-transparent hover:bg-blue-300 hover:opacity-30 transition-all duration-150";
+  const handleStyle = "absolute bg-transparent hover:bg-slate-400/30 transition-colors duration-150";
   
   return (
     <>
       {/* Corner handles */}
       <div 
-        className={`${handleStyle} w-3 h-3 -top-1 -left-1 cursor-nw-resize`}
+        className={`${handleStyle} w-2.5 h-2.5 -top-1 -left-1 cursor-nw-resize`}
         onMouseDown={(e) => onResizeStart(e, 'nw')}
       />
       <div 
-        className={`${handleStyle} w-3 h-3 -top-1 -right-1 cursor-ne-resize`}
+        className={`${handleStyle} w-2.5 h-2.5 -top-1 -right-1 cursor-ne-resize`}
         onMouseDown={(e) => onResizeStart(e, 'ne')}
       />
       <div 
-        className={`${handleStyle} w-3 h-3 -bottom-1 -left-1 cursor-sw-resize`}
+        className={`${handleStyle} w-2.5 h-2.5 -bottom-1 -left-1 cursor-sw-resize`}
         onMouseDown={(e) => onResizeStart(e, 'sw')}
       />
       <div 
-        className={`${handleStyle} w-3 h-3 -bottom-1 -right-1 cursor-se-resize`}
+        className={`${handleStyle} w-2.5 h-2.5 -bottom-1 -right-1 cursor-se-resize`}
         onMouseDown={(e) => onResizeStart(e, 'se')}
       />
       

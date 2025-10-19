@@ -7,6 +7,7 @@ interface MergeUploadProps {
   datasetId: number;
   onSuccess?: (result: any) => void;
   onCancel?: () => void;
+  variant?: 'page' | 'panel';
 }
 
 interface MergeInfo {
@@ -37,7 +38,7 @@ interface PreviewData {
   };
 }
 
-export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, onCancel }) => {
+export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, onCancel, variant = 'page' }) => {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -258,7 +259,7 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
   );
 
   const renderCurrentDatasetInfo = () => (
-    <div className="bg-blue-50 p-4 rounded mb-4">
+    <div className={`bg-blue-50 p-4 rounded ${variant === 'panel' ? 'border border-blue-100 shadow-sm' : ''}`}>
       <h3 className="font-medium text-blue-900 mb-2">Current Dataset</h3>
       <div className="text-sm text-blue-800">
         <p><strong>Rows:</strong> {mergeInfo?.current_rows.toLocaleString()}</p>
@@ -346,16 +347,20 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
     );
   };
 
+  const containerClasses = variant === 'panel'
+    ? 'w-full flex flex-col gap-6'
+    : 'max-w-2xl mx-auto p-6 flex flex-col gap-6';
+
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="mb-6">
+    <div className={containerClasses}>
+      <div className="space-y-2">
         <h2 className="text-xl font-bold text-gray-900 mb-2">Add Data to Dataset</h2>
         <p className="text-gray-600 text-sm">
           Upload additional data and choose how to combine it with your existing dataset.
         </p>
       </div>
 
-      {mergeInfo && renderCurrentDatasetInfo()}
+  {mergeInfo && variant !== 'panel' && renderCurrentDatasetInfo()}
 
       <div className="space-y-6">
         {/* File Upload Area */}

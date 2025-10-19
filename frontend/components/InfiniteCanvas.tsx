@@ -7,6 +7,7 @@ import { GraphPanel } from './GraphPanel';
 import { ModelPanel } from './ModelPanel';
 import { DataManipulationPanel } from './DataManipulationPanel';
 import { DataEditorPanel } from './DataEditorPanel';
+import MergePanel from './MergePanel';
 import { UploadDialog } from './UploadDialog';
 import ModelResultsPanel from './ModelResultsPanel';
 import ModelVisualizationPanel from './ModelVisualizationPanel';
@@ -1097,7 +1098,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       'model-results': PANEL_SIZES.MODEL_RESULTS,
       'model-visualization': PANEL_SIZES.MODEL_VISUALIZATION,
       'manipulation': PANEL_SIZES.DATA_MANIPULATION,
-      'data-editor': PANEL_SIZES.DATA_EDITOR
+      'data-editor': PANEL_SIZES.DATA_EDITOR,
+      'merge': PANEL_SIZES.MERGE
     };
     
     const config = sizeConfig[panelType];
@@ -1375,6 +1377,54 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       payload: [...connections, newConnection]
     });
   }, [panels]);
+
+  const addMergePanel = useCallback((datasetPanelId: string, mergeData: any = {}) => {
+    const datasetPanel = panels.find(p => p.id === datasetPanelId);
+    if (!datasetPanel) return;
+
+    const inferredDatasetId = mergeData?.datasetId
+      ?? datasetPanel.data?.datasetId
+      ?? datasetPanel.data?.dataset_id
+      ?? datasetPanel.data?.id;
+
+    const normalizedData = {
+      datasetId: inferredDatasetId,
+      datasetName: mergeData?.datasetName
+        ?? datasetPanel.data?.datasetName
+        ?? datasetPanel.data?.name
+        ?? datasetPanel.data?.original_filename,
+      ...mergeData
+    };
+
+    const newPanel: Panel = {
+      id: `merge-${Date.now()}`,
+      type: 'merge',
+      x: datasetPanel.x + datasetPanel.width + PANEL_SPACING,
+      y: datasetPanel.y,
+      width: PANEL_SIZES.MERGE.expanded.width,
+      height: PANEL_SIZES.MERGE.expanded.height,
+      data: normalizedData,
+      parentId: datasetPanelId,
+      isExpanded: true
+    };
+
+    dispatch({ type: 'ADD_PANEL', payload: newPanel });
+    bringPanelToFront(newPanel.id);
+
+    const newConnection: Connection = {
+      id: `conn-${Date.now()}`,
+      fromPanelId: datasetPanelId,
+      toPanelId: newPanel.id,
+      type: 'data-flow'
+    };
+
+    dispatch({
+      type: 'SET_CONNECTIONS',
+      payload: [...connections, newConnection]
+    });
+
+    return newPanel.id;
+  }, [panels, bringPanelToFront, connections]);
 
   // Add a model results panel connected to a model panel
   const addModelResultsPanel = useCallback((modelPanelId: string, resultsData: any) => {
@@ -1917,6 +1967,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                       datasetName: panel.data?.name || panel.data?.original_filename
                     });
                   }}
+                    onOpenMergePanel={(_, datasetId) => {
+                      addMergePanel(panel.id, {
+                        datasetId,
+                        datasetName: panel.data?.name || panel.data?.original_filename
+                      });
+                    }}
                   onOpenDataEditor={(datasetId) => {
                     addDataEditorPanel(panel.id, {
                       datasetId,
@@ -1995,6 +2051,19 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                   }}
                   onDataUpdated={(datasetId) => {
                     // Refresh any connected panels
+                  }}
+                />
+              )}
+              {panel.type === 'merge' && (
+                <MergePanel
+                  panel={panel}
+                  isDragging={draggedPanel === panel.id}
+                  onPanelUpdate={(panelId, updates) => {
+                    if (updates.remove) {
+                      removePanel(panelId);
+                    } else {
+                      updatePanel(panelId, updates);
+                    }
                   }}
                 />
               )}

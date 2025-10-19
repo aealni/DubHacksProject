@@ -35,7 +35,7 @@ export interface PanelData {
 
 export interface BasePanel {
   id: string;
-  type: 'dataset' | 'graph' | 'model' | 'model-results' | 'model-visualization' | 'manipulation' | 'data-editor';
+  type: 'dataset' | 'graph' | 'model' | 'model-results' | 'model-visualization' | 'manipulation' | 'data-editor' | 'merge';
   x: number;
   y: number;
   width: number;

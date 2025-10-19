@@ -219,8 +219,8 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
 
   return (
     <div
-      className={`panel-content relative bg-white border border-gray-300 rounded-none shadow-lg overflow-hidden ${
-        isDragging ? 'opacity-90 shadow-2xl' : ''
+      className={`panel-content relative bg-white border border-gray-200 shadow-sm overflow-hidden ${
+        isDragging ? 'opacity-90 shadow-md' : ''
       }`}
       style={{ 
         width: panel.width, 
@@ -229,12 +229,11 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
         pointerEvents: isDragging ? 'none' : 'auto'
       }}
     >
-      {/* Header - simplified without action buttons */}
-  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 pr-24 rounded-none border-b border-gray-200">
+      <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-none"></div>
-            <h3 className="font-semibold text-gray-800">Model Results</h3>
+          <div className="flex items-center space-x-3">
+            <div className="h-2.5 w-2.5 rounded-full bg-gray-500" />
+            <h3 className="text-sm font-medium text-gray-800">Model Results</h3>
           </div>
         </div>
       </div>
@@ -243,22 +242,22 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
       {isExpanded ? (
         <div className="p-4 overflow-y-auto scrollable-content" style={{ height: panel.height - 60 }}>
           {error && (
-            <div className="bg-gradient-to-br from-red-50 to-pink-50 border border-red-200 rounded-none p-4 shadow-sm mb-4">
-              <div className="flex items-start space-x-3">
+            <div className="mb-4 border border-gray-300 bg-gray-50 p-4">
+              <div className="flex items-start space-x-3 text-sm text-gray-700">
                 <div className="flex-shrink-0">
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h5 className="text-sm font-semibold text-red-800">Visualization Error</h5>
-                  <p className="text-sm text-red-700 mt-1">
+                  <h5 className="text-sm font-medium text-gray-800">Visualization Error</h5>
+                  <p className="mt-1 text-sm">
                     {typeof error === 'string' ? error : JSON.stringify(error)}
                   </p>
                   <div className="flex space-x-2 mt-3">
                     <button
                       onClick={() => setError(null)}
-                      className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-xs rounded-none transition-colors"
+                      className="border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-100"
                     >
                       Dismiss
                     </button>
@@ -267,7 +266,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                         setError(null);
                         // Could retry the last visualization request here
                       }}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-none transition-colors"
+                      className="border border-gray-800 px-3 py-1 text-xs font-medium text-white bg-gray-800 hover:bg-gray-700"
                     >
                       Try Again
                     </button>
@@ -275,7 +274,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                 </div>
                 <button
                   onClick={() => setError(null)}
-                  className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -290,19 +289,19 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
               <h4 className="text-sm font-medium text-gray-700">Training Results</h4>
               
               {/* Basic Metrics */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-none p-4 shadow-sm">
+              <div className="border border-gray-200 bg-white p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h5 className="text-sm font-semibold text-gray-800 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <h5 className="flex items-center text-sm font-medium text-gray-800">
+                    <svg className="mr-2 h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Model Performance
                   </h5>
                   {modelResults.metrics && (
-                    <div className={`px-2 py-1 rounded-none text-xs font-medium ${
-                      modelResults.metrics.metric_value > 0.8 ? 'bg-green-100 text-green-800' :
-                      modelResults.metrics.metric_value > 0.6 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
+                    <div className={`px-2 py-1 text-xs font-medium ${
+                      modelResults.metrics.metric_value > 0.8 ? 'bg-gray-900 text-white' :
+                      modelResults.metrics.metric_value > 0.6 ? 'bg-gray-600 text-white' :
+                      'bg-gray-200 text-gray-700'
                     }`}>
                       {modelResults.metrics.metric_primary}: {modelResults.metrics.metric_value.toFixed(3)}
                     </div>
@@ -311,18 +310,18 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   {modelResults.metrics && (
                     <>
-                      <div className="flex justify-between items-center p-2 bg-white rounded-none border">
+                      <div className="flex items-center justify-between border p-2">
                         <span className="font-medium capitalize text-gray-600">{modelResults.metrics.metric_primary}:</span>
-                        <span className="text-green-700 font-mono font-medium">
+                        <span className="font-mono font-medium text-gray-800">
                           {modelResults.metrics.metric_value.toFixed(4)}
                         </span>
                       </div>
                       
                       {/* Additional metrics */}
                       {modelResults.metrics.additional && Object.entries(modelResults.metrics.additional).map(([key, value]: [string, any]) => (
-                        <div key={key} className="flex justify-between items-center p-2 bg-white rounded-none border">
+                        <div key={key} className="flex items-center justify-between border p-2">
                           <span className="font-medium capitalize text-gray-600">{key.replace('_', ' ')}:</span>
-                          <span className="text-green-700 font-mono font-medium">
+                          <span className="font-mono font-medium text-gray-800">
                             {typeof value === 'number' ? value.toFixed(4) : 
                              typeof value === 'object' && value !== null ? JSON.stringify(value) : 
                              String(value)}
@@ -336,16 +335,16 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
 
               {/* Comprehensive Summary Statistics */}
               {modelResults.summary && (
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-none p-4 shadow-sm">
+                <div className="border border-gray-200 bg-white p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h5 className="text-sm font-semibold text-gray-800 flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h5 className="flex items-center text-sm font-medium text-gray-800">
+                      <svg className="mr-2 h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                       Model Summary
                     </h5>
-                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-none border">
-                      {modelResults.problem_type === 'regression' ? '📈 Regression' : '🎯 Classification'}
+                    <span className="border bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                      {modelResults.problem_type === 'regression' ? 'Regression' : 'Classification'}
                     </span>
                   </div>
                   
@@ -355,12 +354,12 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                       <div className="grid grid-cols-2 gap-2 text-xs mb-2">
                         <div>
                           <span className="font-medium">R²:</span>{' '}
-                          <span className="text-blue-700">{modelResults.summary.r_squared.toFixed(4)}</span>
+                          <span className="text-gray-800">{modelResults.summary.r_squared.toFixed(4)}</span>
                         </div>
                         {modelResults.summary.adj_r_squared !== undefined && (
                           <div>
                             <span className="font-medium">Adj. R²:</span>{' '}
-                            <span className="text-blue-700">{modelResults.summary.adj_r_squared.toFixed(4)}</span>
+                            <span className="text-gray-800">{modelResults.summary.adj_r_squared.toFixed(4)}</span>
                           </div>
                         )}
                       </div>
@@ -370,14 +369,14 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                         <div className="grid grid-cols-1 text-xs">
                           <div>
                             <span className="font-medium">F-statistic:</span>{' '}
-                            <span className="text-blue-700">{modelResults.summary.f_statistic.toFixed(3)}</span>
+                            <span className="text-gray-800">{modelResults.summary.f_statistic.toFixed(3)}</span>
                             {modelResults.summary.f_p_value !== undefined && (
-                              <span className="text-gray-600 ml-1">
+                              <span className="ml-1 text-gray-600">
                                 (p-value: {modelResults.summary.f_p_value < 0.001 ? '<0.001' : modelResults.summary.f_p_value.toFixed(3)})
                               </span>
                             )}
                             {modelResults.summary.degrees_freedom && (
-                              <span className="text-gray-500 ml-1 text-xs">
+                              <span className="ml-1 text-xs text-gray-500">
                                 on {modelResults.summary.degrees_freedom.model} and {modelResults.summary.degrees_freedom.residual} DF
                               </span>
                             )}
@@ -390,13 +389,13 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                   {/* Residual Statistics */}
                   {modelResults.summary.residuals && (
                     <div className="mb-3">
-                      <div className="text-xs font-medium text-gray-700 mb-1">Residuals:</div>
-                      <div className="grid grid-cols-5 gap-1 text-xs">
-                        <div><span className="font-medium">Min:</span> {modelResults.summary.residuals.min.toFixed(3)}</div>
-                        <div><span className="font-medium">Q1:</span> {modelResults.summary.residuals.q1.toFixed(3)}</div>
-                        <div><span className="font-medium">Med:</span> {modelResults.summary.residuals.median.toFixed(3)}</div>
-                        <div><span className="font-medium">Q3:</span> {modelResults.summary.residuals.q3.toFixed(3)}</div>
-                        <div><span className="font-medium">Max:</span> {modelResults.summary.residuals.max.toFixed(3)}</div>
+                      <div className="mb-1 text-xs font-medium text-gray-700">Residuals:</div>
+                      <div className="grid grid-cols-5 gap-1 text-xs text-gray-600">
+                        <div><span className="font-medium text-gray-700">Min:</span> {modelResults.summary.residuals.min.toFixed(3)}</div>
+                        <div><span className="font-medium text-gray-700">Q1:</span> {modelResults.summary.residuals.q1.toFixed(3)}</div>
+                        <div><span className="font-medium text-gray-700">Med:</span> {modelResults.summary.residuals.median.toFixed(3)}</div>
+                        <div><span className="font-medium text-gray-700">Q3:</span> {modelResults.summary.residuals.q3.toFixed(3)}</div>
+                        <div><span className="font-medium text-gray-700">Max:</span> {modelResults.summary.residuals.max.toFixed(3)}</div>
                       </div>
                     </div>
                   )}
@@ -410,7 +409,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                       <div className="max-h-40 overflow-y-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="border-b border-blue-200 bg-blue-50">
+                            <tr className="border-b border-gray-200 bg-gray-50">
                               <th className="text-left py-1 px-1">Feature</th>
                               <th className="text-right py-1 px-1">Estimate</th>
                               {modelResults.summary.coefficients[0].std_error !== undefined && <th className="text-right py-1 px-1">Std. Error</th>}
@@ -434,11 +433,11 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                               };
                               
                               const pValueColor = coef.p_value !== undefined ? 
-                                (coef.p_value < 0.05 ? 'text-green-700 font-medium' : 'text-gray-600') : 
+                                (coef.p_value < 0.05 ? 'text-gray-800 font-semibold' : 'text-gray-600') : 
                                 'text-gray-600';
                               
                               return (
-                                <tr key={idx} className="border-b border-blue-100 hover:bg-blue-25">
+                                <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
                                   <td className="py-1 px-1 truncate max-w-24" title={coef.feature}>
                                     {coef.feature}
                                   </td>
@@ -461,7 +460,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                                     </td>
                                   )}
                                   {coef.p_value !== undefined && (
-                                    <td className="text-center py-1 px-1 font-bold text-green-600">
+                                    <td className="text-center py-1 px-1 font-semibold text-gray-700">
                                       {getSignificance(coef.p_value)}
                                     </td>
                                   )}
@@ -484,7 +483,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                     <div className="mb-3">
                       <div className="text-xs font-medium text-gray-700 mb-1">Classification Report:</div>
                       <div className="text-xs">
-                        <div className="grid grid-cols-3 gap-2 font-medium border-b border-blue-200 pb-1">
+                        <div className="grid grid-cols-3 gap-2 font-medium border-b border-gray-200 pb-1">
                           <span>Class</span>
                           <span>Precision</span>
                           <span>Recall</span>
@@ -492,7 +491,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                         {Object.entries(modelResults.summary.classification_report).map(([key, value]: [string, any]) => {
                           if (key === 'accuracy' || key === 'macro avg' || key === 'weighted avg') return null;
                           return (
-                            <div key={key} className="grid grid-cols-3 gap-2 border-b border-blue-100">
+                            <div key={key} className="grid grid-cols-3 gap-2 border-b border-gray-200">
                               <span className="truncate" title={key}>{key}</span>
                               <span>{value.precision?.toFixed(3) || 'N/A'}</span>
                               <span>{value.recall?.toFixed(3) || 'N/A'}</span>
@@ -506,29 +505,28 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
               )}
 
               {/* Visualization Buttons */}
-              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-none p-4 shadow-sm">
+              <div className="bg-white border border-gray-200 rounded-none p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <h5 className="text-sm font-semibold text-gray-800 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     Model Visualizations
                   </h5>
-                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-none border">
-                    {modelResults.problem_type === 'regression' ? '📈 Regression' : '🎯 Classification'}
+                  <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-none border border-gray-200">
+                    {modelResults.problem_type === 'regression' ? 'Regression' : 'Classification'}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => requestVisualization('pred_vs_actual')}
                     disabled={loadingVisualization}
-                    className="group relative px-3 py-2 bg-white hover:bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 rounded-none text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                    className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   >
                     <div className="flex items-center justify-center space-x-2">
                       <span>📊</span>
                       <span>Pred vs Actual</span>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-none"></div>
                   </button>
                   
                   {modelResults.problem_type === 'regression' && (
@@ -536,35 +534,32 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                       <button
                         onClick={() => requestVisualization('residuals')}
                         disabled={loadingVisualization}
-                        className="group relative px-3 py-2 bg-white hover:bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 rounded-none text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                       >
                         <div className="flex items-center justify-center space-x-2">
                           <span>📈</span>
                           <span>Residuals</span>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-none"></div>
                       </button>
                       <button
                         onClick={() => requestVisualization('qq_plot')}
                         disabled={loadingVisualization}
-                        className="group relative px-3 py-2 bg-white hover:bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 rounded-none text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                       >
                         <div className="flex items-center justify-center space-x-2">
                           <span>📊</span>
                           <span>Q-Q Plot</span>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-none"></div>
                       </button>
                       <button
                         onClick={() => requestVisualization('residuals_vs_fitted')}
                         disabled={loadingVisualization}
-                        className="group relative px-3 py-2 bg-white hover:bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 rounded-none text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                       >
                         <div className="flex items-center justify-center space-x-2">
                           <span>📈</span>
                           <span>Residuals vs Fitted</span>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-none"></div>
                       </button>
                     </>
                   )}
@@ -574,24 +569,22 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                       <button
                         onClick={() => requestVisualization('confusion_matrix')}
                         disabled={loadingVisualization}
-                        className="group relative px-3 py-2 bg-white hover:bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                       >
                         <div className="flex items-center justify-center space-x-2">
                           <span>📊</span>
                           <span>Confusion Matrix</span>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
                       </button>
                       <button
                         onClick={() => requestVisualization('roc_curve')}
                         disabled={loadingVisualization}
-                        className="group relative px-3 py-2 bg-white hover:bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                       >
                         <div className="flex items-center justify-center space-x-2">
                           <span>📈</span>
                           <span>ROC Curve</span>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
                       </button>
                     </>
                   )}
@@ -599,21 +592,20 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                   <button
                     onClick={() => requestVisualization('feature_importance')}
                     disabled={loadingVisualization}
-                    className="group relative col-span-2 px-3 py-2 bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 border border-purple-300 hover:border-purple-400 text-purple-800 hover:text-purple-900 rounded-lg text-xs font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                    className="col-span-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 rounded-none text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   >
                     <div className="flex items-center justify-center space-x-2">
                       <span>⭐</span>
                       <span>Feature Importance</span>
                       <span className="text-xs opacity-75">(Recommended)</span>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
                   </button>
                 </div>
                 
                 {loadingVisualization && (
                   <div className="flex items-center justify-center mt-3 space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-300 border-t-purple-600"></div>
-                    <div className="text-xs text-purple-600 font-medium">Creating visualization...</div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-gray-600"></div>
+                    <div className="text-xs text-gray-600 font-medium">Creating visualization...</div>
                   </div>
                 )}
               </div>
@@ -621,15 +613,15 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
           )}
 
           {/* Model Comparison Section */}
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-none p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <h5 className="text-sm font-semibold text-gray-800 flex items-center">
-                <svg className="w-4 h-4 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Model Comparison
               </h5>
-              <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">
+              <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-none border border-gray-200">
                 Compare Models
               </span>
             </div>
@@ -646,7 +638,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                     // For now, we'll show an alert
                     alert('Model comparison feature coming soon! This will allow you to compare multiple models side-by-side.');
                   }}
-                  className="group relative px-4 py-2 bg-gradient-to-r from-indigo-100 to-blue-100 hover:from-indigo-200 hover:to-blue-200 border border-indigo-300 hover:border-indigo-400 text-indigo-800 hover:text-indigo-900 rounded-lg text-xs font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 rounded-none text-xs font-semibold transition-colors shadow-sm"
                 >
                   <div className="flex items-center justify-center space-x-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -654,7 +646,6 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                     </svg>
                     <span>Compare Models</span>
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
                 </button>
               </div>
               

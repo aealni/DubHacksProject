@@ -19,48 +19,45 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
   const [graphData, setGraphData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(true); // Auto-expand so users can see column selection
+  const [isExpanded, setIsExpanded] = useState(true);
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [selectedXColumn, setSelectedXColumn] = useState<string>('');
   const [selectedYColumn, setSelectedYColumn] = useState<string>('');
   const [showColumnSelection, setShowColumnSelection] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
-  const [resizeType, setResizeType] = useState<string>(''); // 'n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'
+  const [resizeType, setResizeType] = useState<string>('');
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, panelX: 0, panelY: 0 });
+  const headerHeight = 56;
 
   // Calculate optimal panel size based on content
   const calculateOptimalSize = () => {
     if (!isExpanded) {
-      return { width: 320, height: 80 }; // Collapsed size - header only
+      return { width: 300, height: 72 };
     }
-    
-    // Large expanded size to show ALL content
-    let optimalWidth = 800;
-    let optimalHeight = 600;
-    
-    // Adjust based on graph type and content
+
+  let optimalWidth = 540;
+  let optimalHeight = 400;
+
     if (showColumnSelection) {
-      optimalHeight += 100; // Space for column selection
+      optimalHeight += 60;
     }
-    
+
     if (graphData) {
-      // Even larger size for generated graphs
-      optimalWidth = Math.max(900, optimalWidth);
-      optimalHeight = Math.max(700, optimalHeight);
+      optimalHeight = Math.min(520, optimalHeight + 80);
+      optimalWidth = Math.max(optimalWidth, 560);
     }
-    
+
     return { width: optimalWidth, height: optimalHeight };
   };
 
   // Calculate content scale based on panel size vs expanded size
   const getContentScale = () => {
-    const expandedWidth = 800; // Base expanded width
-    const expandedHeight = 600; // Base expanded height
-    
-    // Calculate scale based on width (use the smaller scale to maintain aspect ratio)
+    const expandedWidth = 540;
+    const expandedHeight = 400;
+
     const widthScale = panel.width / expandedWidth;
-    const heightScale = (panel.height - 80) / (expandedHeight - 80); // Account for header height
-    
+    const heightScale = (panel.height - headerHeight) / (expandedHeight - headerHeight);
+
     return Math.min(widthScale, heightScale);
   };
 
@@ -338,25 +335,25 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
 
   return (
     <div
-      className={`panel-content relative bg-white rounded-none shadow-xl border transition-all duration-300 ease-out ${
-        isExpanded ? 'border-green-400 shadow-2xl' : 'border-gray-200 hover:border-green-300 shadow-lg'
+      className={`panel-content relative bg-white border border-gray-200 shadow-sm ${
+        isExpanded ? 'ring-1 ring-gray-300/50' : ''
       }`}
       style={{
         width: panel.width,
         height: panel.height,
-        pointerEvents: isResizing ? 'none' : 'auto'
+        pointerEvents: isResizing ? 'none' : 'auto',
+        transition: 'width 0.25s ease, height 0.25s ease'
       }}
     >
-      {/* Header - simplified without action buttons */}
-  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 pr-24 rounded-none border-b border-gray-200">
+      <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-green-500 rounded-none shadow-sm"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-gray-500"></div>
             <div>
-              <h3 className="font-semibold text-gray-800 text-sm">
+              <h3 className="text-sm font-medium text-gray-800">
                 {getGraphTypeName(panel.data?.graphType)}
               </h3>
-              <div className="text-xs text-gray-600 mt-1">
+              <div className="mt-0.5 text-[11px] text-gray-500">
                 Dataset: {panel.data?.datasetName || panel.data?.datasetId}
               </div>
             </div>
@@ -371,7 +368,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
           transform: `scale(${getContentScale()})`,
           transformOrigin: 'top left',
           width: `${100 / getContentScale()}%`,
-          height: `${(panel.height - 80) / getContentScale()}px`
+          height: `${(panel.height - headerHeight) / getContentScale()}px`
         }}
       >
         {/* Column Selection */}
@@ -383,11 +380,11 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
             </h4>
             
             {availableColumns.length === 0 ? (
-              <div className="text-xs text-gray-500 py-2">
+              <div className="py-2 text-xs text-gray-500">
                 Loading columns from dataset {panel.data.datasetId}...
                 <button
                   onClick={loadDatasetColumns}
-                  className="ml-2 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-none text-xs"
+                  className="ml-2 border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
                 >
                   Retry
                 </button>
@@ -398,11 +395,11 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                   {/* X Column */}
                   {panel.data.graphType !== 'correlation' && (
                     <div>
-                      <label className="block text-gray-600 mb-1">X Column:</label>
+                      <label className="mb-1 block text-gray-600">X Column:</label>
                       <select
                         value={selectedXColumn}
                         onChange={(e) => setSelectedXColumn(e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded-none text-xs"
+                        className="w-full border border-gray-300 p-1 text-xs"
                       >
                         <option value="">Select column...</option>
                         {availableColumns.map(col => (
@@ -415,11 +412,11 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                   {/* Y Column */}
                   {['scatter', 'line', 'bar'].includes(panel.data.graphType) && (
                     <div>
-                      <label className="block text-gray-600 mb-1">Y Column:</label>
+                      <label className="mb-1 block text-gray-600">Y Column:</label>
                       <select
                         value={selectedYColumn}
                         onChange={(e) => setSelectedYColumn(e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded-none text-xs"
+                        className="w-full border border-gray-300 p-1 text-xs"
                       >
                         <option value="">Select column...</option>
                         {availableColumns.map(col => (
@@ -434,7 +431,11 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                 <button
                   onClick={generateGraph}
                   disabled={isLoading || (!selectedXColumn && panel.data.graphType !== 'correlation')}
-                  className="w-full mt-2 px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-none text-xs"
+                  className={`w-full mt-2 px-3 py-1 text-xs font-medium transition-colors ${
+                    isLoading || (!selectedXColumn && panel.data.graphType !== 'correlation')
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-900 text-white hover:bg-gray-700'
+                  }`}
                 >
                   {isLoading ? 'Generating...' : 'Generate Graph'}
                 </button>
@@ -445,16 +446,16 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
         
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-32">
-            <div className="animate-spin rounded-none h-8 w-8 border-b-2 border-green-600"></div>
-            <p className="text-sm text-gray-500 mt-2">Generating graph...</p>
+            <div className="h-8 w-8 animate-spin rounded-none border-b-2 border-gray-600"></div>
+            <p className="mt-2 text-sm text-gray-500">Generating graph...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-32 text-center">
-            <div className="text-red-500 font-bold text-lg mb-2">Error</div>
-            <p className="text-sm text-red-600">{error}</p>
+            <div className="mb-2 text-lg font-semibold text-gray-700">Error</div>
+            <p className="text-sm text-gray-600">{error}</p>
             <button
               onClick={generateGraph}
-              className="mt-2 px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-none"
+              className="mt-2 border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-100"
             >
               Retry
             </button>

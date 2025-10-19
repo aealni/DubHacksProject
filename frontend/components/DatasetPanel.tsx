@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
 
-const PANEL_WIDTH = 240;
-const PANEL_HEIGHT = 150;
-const BUTTON_CLASS = 'no-drag flex items-center justify-center w-full h-full min-h-0 min-w-0 bg-gray-400 text-white text-[11px] font-semibold uppercase tracking-wide border border-gray-400 rounded-none transition-colors hover:bg-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-0 disabled:bg-gray-300 disabled:border-gray-300 disabled:text-gray-200 disabled:cursor-not-allowed';
+const PANEL_WIDTH = 300;
+const PANEL_HEIGHT = 140;
+const BUTTON_CLASS = 'no-drag flex items-center justify-center w-full h-full min-h-0 min-w-0 border border-gray-300 bg-white px-2 text-[11px] font-medium uppercase tracking-wide text-gray-600 transition-colors hover:border-gray-400 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-200 focus-visible:ring-offset-0 disabled:border-gray-200 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed';
 
 interface DatasetPanelProps {
   panel: {
@@ -19,6 +19,7 @@ interface DatasetPanelProps {
   onCreateGraph: (datasetId: number, graphType: string) => void;
   onCreateModel: (datasetId: number) => void;
   onOpenDataManipulation: (datasetId: number) => void;
+  onOpenMergePanel: (panelId: string, datasetId: number) => void;
   onOpenDataEditor: (datasetId: number) => void;
   onPanelUpdate: (panelId: string, updates: any) => void;
 }
@@ -35,6 +36,7 @@ export const DatasetPanel: React.FC<DatasetPanelProps> = ({
   onCreateGraph,
   onCreateModel,
   onOpenDataManipulation,
+  onOpenMergePanel,
   onOpenDataEditor,
   onPanelUpdate
 }) => {
@@ -77,9 +79,7 @@ export const DatasetPanel: React.FC<DatasetPanelProps> = ({
 
   const handleMerge = createButtonHandler(() => {
     if (!hasDataset) return;
-    if (typeof window !== 'undefined') {
-      window.open(`/dataset/${datasetId}?merge=1`, '_blank', 'noopener');
-    }
+    onOpenMergePanel(panel.id, datasetId as number);
   });
 
   const handleGraph = createButtonHandler(() => {
@@ -94,7 +94,7 @@ export const DatasetPanel: React.FC<DatasetPanelProps> = ({
 
   return (
     <div
-      className={`panel-content relative bg-white border border-gray-400 shadow-sm rounded-none ${isDragging ? 'opacity-90' : ''}`}
+      className={`panel-content relative bg-white border border-gray-200 shadow-sm ${isDragging ? 'opacity-90 shadow-md' : ''}`}
       style={{
         width: panel.width,
         height: panel.height,
@@ -102,13 +102,13 @@ export const DatasetPanel: React.FC<DatasetPanelProps> = ({
         borderRadius: 0
       }}
     >
-      <div className="flex h-full flex-col rounded-none">
-        <div className="px-3 py-2 border-b border-gray-300 bg-gray-100 rounded-none">
-          <h3 className="text-sm font-semibold text-gray-800 truncate">{datasetName}</h3>
-          {stats && <p className="text-[11px] text-gray-500 mt-0.5 truncate">{stats}</p>}
+      <div className="flex h-full flex-col">
+        <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-700 truncate">{datasetName}</h3>
+          {stats && <p className="mt-0.5 text-[11px] text-gray-500 truncate">{stats}</p>}
         </div>
-  <div className="flex-1 bg-gray-200 p-2 rounded-none">
-          <div className="grid h-full grid-cols-2 grid-rows-2 auto-rows-fr gap-2">
+        <div className="flex-1 bg-white p-2">
+          <div className="grid h-full grid-cols-2 grid-rows-2 auto-rows-fr gap-1.5">
             <button type="button" className={BUTTON_CLASS} onClick={handleClean} disabled={!hasDataset}>
               Clean Data
             </button>

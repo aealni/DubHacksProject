@@ -11,31 +11,35 @@ export const PANEL_SIZES = {
   
   // Specific panel configurations
   DATASET: { 
-    collapsed: { width: 320, height: 80 },
-    expanded: { width: 600, height: 500 }  // Much larger for full content
+    collapsed: { width: 300, height: 72 },
+    expanded: { width: 480, height: 360 }
   },
   GRAPH: { 
-    collapsed: { width: 320, height: 80 },
-    expanded: { width: 650, height: 550 }  // Larger for chart viewing
+    collapsed: { width: 300, height: 72 },
+    expanded: { width: 540, height: 400 }
   },
   MODEL: { 
-    collapsed: { width: 320, height: 80 },
-    expanded: { width: 550, height: 450 }  // More space for model options
+    collapsed: { width: 300, height: 72 },
+    expanded: { width: 540, height: 420 }
   },
   MODEL_RESULTS: { 
-    collapsed: { width: 320, height: 80 },
-    expanded: { width: 700, height: 600 }  // Large for results viewing
+    collapsed: { width: 300, height: 72 },
+    expanded: { width: 620, height: 480 }
   },
   MODEL_VISUALIZATION: { 
-    collapsed: { width: 320, height: 80 },
-    expanded: { width: 550, height: 440 }
+    collapsed: { width: 300, height: 72 },
+    expanded: { width: 520, height: 400 }
   },
   DATA_MANIPULATION: { 
-    collapsed: { width: 320, height: 80 },
-    expanded: { width: 450, height: 360 }
+    collapsed: { width: 300, height: 72 },
+    expanded: { width: 500, height: 380 }
   },
   DATA_EDITOR: { 
-    collapsed: { width: 320, height: 80 },
-    expanded: { width: 450, height: 360 }
+    collapsed: { width: 300, height: 72 },
+    expanded: { width: 520, height: 400 }
+  },
+  MERGE: {
+    collapsed: { width: 320, height: 90 },
+    expanded: { width: 560, height: 420 }
   }
 };

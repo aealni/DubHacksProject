@@ -31,6 +31,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const datasetLabel = panel.data?.datasetName ?? (panel.data?.datasetId ? `Dataset ${panel.data.datasetId}` : null);
   
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
@@ -151,19 +152,19 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
   };
 
   const cleaningOperations = [
-    { id: 'remove_nulls', name: 'Remove Null Values', icon: '🧹', desc: 'Remove rows with null values in selected column' },
-    { id: 'fill_nulls_mean', name: 'Fill with Mean', icon: '📊', desc: 'Fill null values with column mean' },
-    { id: 'fill_nulls_median', name: 'Fill with Median', icon: '📈', desc: 'Fill null values with column median' },
-    { id: 'remove_duplicates', name: 'Remove Duplicates', icon: '🔄', desc: 'Remove duplicate rows from entire dataset' },
-    { id: 'normalize', name: 'Normalize', icon: '⚖️', desc: 'Normalize values in selected column (0-1)' },
-    { id: 'standardize', name: 'Standardize', icon: '📏', desc: 'Standardize values (z-score normalization)' }
+    { id: 'remove_nulls', name: 'Remove Null Values', desc: 'Remove rows with null values in the selected column.' },
+    { id: 'fill_nulls_mean', name: 'Fill with Mean', desc: 'Fill null values with the column mean.' },
+    { id: 'fill_nulls_median', name: 'Fill with Median', desc: 'Fill null values with the column median.' },
+    { id: 'remove_duplicates', name: 'Remove Duplicates', desc: 'Remove duplicate rows from the dataset.' },
+    { id: 'normalize', name: 'Normalize', desc: 'Scale values in the selected column between 0 and 1.' },
+    { id: 'standardize', name: 'Standardize', desc: 'Apply z-score normalization to the selected column.' }
   ];
 
   const transformOperations = [
-    { id: 'uppercase', name: 'Uppercase', icon: '🔤', desc: 'Convert text to uppercase' },
-    { id: 'lowercase', name: 'Lowercase', icon: '🔡', desc: 'Convert text to lowercase' },
-    { id: 'trim_whitespace', name: 'Trim Spaces', icon: '✂️', desc: 'Remove leading/trailing whitespace' },
-    { id: 'round_numbers', name: 'Round Numbers', icon: '🔢', desc: 'Round numeric values to specified decimals' }
+    { id: 'uppercase', name: 'Uppercase', desc: 'Convert text to uppercase.' },
+    { id: 'lowercase', name: 'Lowercase', desc: 'Convert text to lowercase.' },
+    { id: 'trim_whitespace', name: 'Trim Spaces', desc: 'Remove leading and trailing whitespace.' },
+    { id: 'round_numbers', name: 'Round Numbers', desc: 'Round numeric values to specified decimals.' }
   ];
 
   // Resize handlers
@@ -263,8 +264,8 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
 
   return (
     <div
-      className={`panel-content relative bg-white border border-orange-300 rounded-none shadow-xl overflow-hidden transition-all duration-300 ease-out ${
-        isDragging ? 'opacity-90 shadow-2xl scale-105' : 'shadow-lg'
+      className={`panel-content relative bg-white border border-gray-200 rounded-none shadow-sm overflow-hidden transition-all duration-200 ${
+        isDragging ? 'opacity-90 shadow-md' : ''
       }`}
       style={{
         width: panel.width,
@@ -272,21 +273,20 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
       }}
     >
       {/* Header - simplified without action buttons */}
-    <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 pr-24 rounded-none border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-      <div className="w-3 h-3 bg-orange-500 rounded-none shadow-sm"></div>
-      <div>
-              <div className="text-xs text-gray-600 mt-1">
-                Dataset: {panel.data?.datasetName || panel.data?.datasetId}
-              </div>
-            </div>
+      <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <div className="h-2.5 w-2.5 bg-gray-400" />
+          <div>
+            <h3 className="text-sm font-medium text-gray-800">Data Cleaning</h3>
+            {datasetLabel && (
+              <div className="text-[11px] text-gray-500">{datasetLabel}</div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 overflow-auto scrollable-content" style={{ maxHeight: `${panel.height - 100}px` }}>
+  <div className="p-3 overflow-auto scrollable-content" style={{ maxHeight: `${panel.height - 100}px` }}>
         {!isExpanded ? (
           <div className="text-center text-gray-500 text-sm">
             Click to open data manipulation tools
@@ -294,19 +294,17 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
         ) : (
           <div className="space-y-4">
             {/* Tabs */}
-            <div className="flex space-x-1 bg-gray-100 p-1 rounded-none">
+            <div className="flex items-center gap-1 border border-gray-200 bg-gray-50 p-1 rounded-none">
               {['clean', 'filter', 'transform'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
-                  className={`flex-1 py-2 px-3 rounded-none text-xs font-medium transition-colors ${
+                  className={`flex-1 py-2 px-3 rounded-none text-xs font-medium transition-colors border ${
                     activeTab === tab
-                      ? 'bg-white text-orange-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-800'
+                      ? 'bg-white text-gray-800 border-gray-300'
+                      : 'text-gray-500 hover:text-gray-700 border-transparent'
                   }`}
                 >
-                  {tab === 'clean' && '🧹'} {tab === 'filter' && '🔍'} {tab === 'transform' && '🔄'}
-                  {' '}
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
@@ -333,8 +331,8 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
               {activeTab === 'clean' && cleaningOperations.map(op => (
                 <div key={op.id} className="border border-gray-200 rounded-none p-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span>{op.icon}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 bg-gray-500" />
                       <div>
                         <div className="text-xs font-medium text-gray-800">{op.name}</div>
                         <div className="text-[10px] text-gray-500">{op.desc}</div>
@@ -343,7 +341,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
                     <button
                       onClick={() => performCleaningOperation(op.id)}
                       disabled={isProcessing}
-                      className="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-none text-[10px] disabled:opacity-50"
+                      className="px-2 py-1 border border-gray-400 text-gray-700 hover:bg-gray-100 rounded-none text-[10px] disabled:opacity-50"
                     >
                       Apply
                     </button>
@@ -354,8 +352,8 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
               {activeTab === 'transform' && transformOperations.map(op => (
                 <div key={op.id} className="border border-gray-200 rounded-none p-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span>{op.icon}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 bg-gray-500" />
                       <div>
                         <div className="text-xs font-medium text-gray-800">{op.name}</div>
                         <div className="text-[10px] text-gray-500">{op.desc}</div>
@@ -364,7 +362,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
                     <button
                       onClick={() => performCleaningOperation(op.id)}
                       disabled={isProcessing}
-                      className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-none text-[10px] disabled:opacity-50"
+                      className="px-2 py-1 border border-gray-400 text-gray-700 hover:bg-gray-100 rounded-none text-[10px] disabled:opacity-50"
                     >
                       Apply
                     </button>
@@ -382,26 +380,26 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
             {/* Processing Indicator */}
             {isProcessing && (
               <div className="flex items-center justify-center py-2">
-                <div className="animate-spin rounded-none h-4 w-4 border-b-2 border-orange-600"></div>
+                <div className="animate-spin rounded-none h-4 w-4 border-b-2 border-gray-600"></div>
                 <span className="ml-2 text-xs text-gray-600">Processing...</span>
               </div>
             )}
 
             {/* Error Display */}
             {error && (
-              <div className="p-2 bg-red-50 border border-red-200 rounded-none">
-                <p className="text-xs text-red-600">{error}</p>
+              <div className="p-2 bg-gray-100 border border-gray-300 rounded-none">
+                <p className="text-xs text-gray-700">{error}</p>
               </div>
             )}
 
             {/* Results Display */}
             {results && (
-              <div className="p-2 bg-green-50 border border-green-200 rounded-none">
-                <p className="text-xs text-green-700">
+              <div className="p-2 bg-gray-100 border border-gray-300 rounded-none">
+                <p className="text-xs text-gray-700">
                   Operation completed successfully
                 </p>
                 {results.rows_affected && (
-                  <p className="text-[10px] text-green-600">
+                  <p className="text-[10px] text-gray-600">
                     Rows affected: {results.rows_affected}
                   </p>
                 )}
