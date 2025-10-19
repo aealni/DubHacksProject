@@ -117,7 +117,7 @@ export default function Workspace() {
         <button
           type="button"
           onClick={handleOpenEducation}
-          className="fixed top-4 right-4 z-[2500] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-lg transition hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+          className="fixed top-2 right-4 z-[2500] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-lg transition hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
           aria-label="Open education overlay"
         >
           Open Education

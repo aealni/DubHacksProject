@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { Home, Lock, Unlock, Eye, EyeOff, Plus, X, GripVertical, GitMerge } from 'lucide-react';
 import { Panel, Folder } from '../utils/canvas/types';
+import ThemeToggle from './ThemeToggle';
 
 interface LayersPanelProps {
   panels: Panel[];
@@ -57,12 +58,12 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const dragDisabled = searchTerm.trim().length > 0;
   const draggedPanel = panels.find(p => p.id === draggedPanelId);
-  const homeButtonStyle: React.CSSProperties = isCollapsed
+  const headerActionsStyle: React.CSSProperties = isCollapsed
     ? { top: 'calc(100% + 0.75rem)', left: '50%', transform: 'translateX(-50%)' }
     : { top: '1rem', left: '1rem', transform: 'translateX(0)' };
 
   // Unified small icon button styling to match + / x visuals used across app
-  const smallIconBtn = "inline-flex items-center justify-center h-7 w-7 rounded-md bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors";
+  const smallIconBtn = "inline-flex items-center justify-center h-7 w-7 rounded-md bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700";
 
   // Helper to build a full-size drag preview so the default semi-transparent small ghost is replaced
   const createDragPreview = (e: React.DragEvent, sourceEl: HTMLElement) => {
@@ -310,16 +311,21 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
           </svg>
         </button>
-        <button
-          type="button"
-          onClick={() => router.push('/')}
-          className={`${smallIconBtn} absolute transition-all duration-300`}
-          style={homeButtonStyle}
-          title="Go to home"
-          aria-label="Go to home"
+        <div
+          className={`absolute flex gap-2 transition-all duration-300 ${isCollapsed ? 'flex-col items-center' : 'items-center'}`}
+          style={headerActionsStyle}
         >
-          <Home className="w-4 h-4" />
-        </button>
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            className={smallIconBtn}
+            title="Go to home"
+            aria-label="Go to home"
+          >
+            <Home className="w-4 h-4" />
+          </button>
+          <ThemeToggle variant="panel" className={smallIconBtn} />
+        </div>
       </div>
 
       {!isCollapsed && (

@@ -75,7 +75,7 @@ const topics: Topic[] = [
   </li>
 </ul>
 
-       <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Goal: Describe what the spreadsheet is showing without performing calculations.</p>`,
+       <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Describe what the spreadsheet is showing without performing calculations.</p>`,
       `<h4 class="text-lg font-semibold text-blue-200">Why Use Spreadsheets?</h4>
 
 <p class="mt-2 text-sm text-slate-200">
@@ -102,7 +102,7 @@ const topics: Topic[] = [
   Behind every dashboard or model, there’s usually a spreadsheet that helped test the first idea.  
   Learning to <strong>read and interpret</strong> tables like this builds the foundation for data analysis everywhere else.
 </p>
-       <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Goal: Recognize spreadsheets as a launchpad for deeper analysis and collaboration.</p>`
+       <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Recognize spreadsheets as a launchpad for deeper analysis and collaboration.</p>`
     ],
     quiz: [
       {
@@ -156,29 +156,140 @@ const topics: Topic[] = [
     description: 'Identify missing values, outliers, and malformed records.',
     anchor: '#data-cleaning-basics',
     detail: [
-      'Start by profiling null counts per column and the distribution of categorical values. This exposes easy wins for validation rules or type casting.',
-      'Document every transformation you make so teammates understand how raw data differs from what they see in the workspace.'
+      `<h4 class="text-lg font-semibold text-blue-200">Why Data Cleaning Matters</h4>
+
+<p class="mt-2 text-sm text-slate-200">
+  Raw data rarely arrives ready for analysis. Typos, blanks, and mismatched totals can sneak in — 
+  and every chart or model you build will inherit those mistakes unless you clean first.
+</p>
+
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li><strong>Validate before you visualize:</strong> Confirm that the numbers make sense before summarizing or automating.</li>
+  <li><strong>Prep like a chef:</strong> Data cleaning is your <em>mise en place</em> — prepare the ingredients now to avoid chaos later.</li>
+  <li><strong>Build team trust:</strong> Documented fixes and clear methods make your analysis reproducible and reliable.</li>
+</ul>
+
+</ul>
+<p class="mt-3 text-sm text-slate-200"><a class="text-blue-300 underline" href="#" data-education-load-path="/education/interpreting-data-sample.csv" data-education-dataset-name="Interpreting Data Sample.csv">Load the sample CSV</a> (or reopen its dataset tab from the bottom canvas bar [it's the same dataset as the last lesson]) so you can spot issues as you read.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Clean data = trustworthy insights.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Spotting Missing Values</h4>
+<p class="mt-2 text-sm text-slate-200">Missing data hides behind blanks, strings like <code>N/A</code>, zeros, or even em dashes. Scan for them intentionally.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Filter each column to the blank state and note which fields lose coverage.</li>
+  <li>Check patterns: are whole columns empty, or do certain regions/months go missing?</li>
+  <li>Use conditional formatting or quick summary stats to highlight gaps in bulk.</li>
+</ul>
+<p class="mt-3 text-sm text-slate-200"><strong>For example:</strong> In the sample CSV, the January South row lacks a note, so documenting “context missing” keeps teammates aware.</p>
+<p class="mt-3 text-sm text-slate-200">Need another view? Click the dataset tab in the bottom canvas bar or tap the plus button in the lower-right corner, then choose “Add Existing Dataset” to reopen the table.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Identify and log what’s missing before you fill or drop anything.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Understanding Outliers</h4>
+<p class="mt-2 text-sm text-slate-200">Outliers live far from the pack. They can signal data entry errors—or the most important story in the sheet.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Sort numerically to spot sudden jumps (like a spike in sales or returns).</li>
+  <li>Compare against peer rows: does one region or month suddenly hit zero or 10× the usual value?</li>
+  <li>Pair quick visual checks—sparklines, scatterplots, min/max summaries—with narrative context.</li>
+</ul>
+<p class="mt-3 text-sm text-slate-200"><strong>For example:</strong> February South drops to zero in every metric. That might be a valid pause (see the Notes column) or a missing upload worth confirming.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Treat outliers as questions, not automatic deletions.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Catching Malformed Records</h4>
+<p class="mt-2 text-sm text-slate-200">Formatting issues block downstream tools even when values look “fine.” Make consistency part of cleaning.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Align date formats (ISO, month abbreviations, etc.) before exporting to other systems.</li>
+  <li>Strip symbols from numeric fields so <code>$45,000</code> becomes <code>45000</code>.</li>
+  <li>Standardize categories: “North” and “north” should not coexist.</li>
+  <li>Watch for summary rows like “Total” that mix data types in the same column.</li>
+</ul>
+<p class="mt-3 text-sm text-slate-200"><strong>For example:</strong> The “Total” row in our sample CSV aggregates months and regions; tag or move it so charting tools don’t mistake it for another record.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Consistency makes data reusable and automation-friendly.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Simple Cleaning Strategies</h4>
+<p class="mt-2 text-sm text-slate-200">Choose tactics deliberately and leave an audit trail.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li><strong>Remove:</strong> Drop empty or duplicate rows when they add no signal.</li>
+  <li><strong>Repair:</strong> Fill missing values with grouped medians, means, or generic placeholders (like 0).</li>
+  <li><strong>Replace:</strong> Normalize text (“N/A” → blank) so filters and joins behave.</li>
+  <li><strong>Review:</strong> Re-run summaries to confirm the meaning stayed intact.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Every cleaning step should be explainable and reversible.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Try data cleaning yourself!</h4>
+<p class="mt-2 text-sm text-slate-200">Put the concepts to work immediately.</p>
+
+
+
+
+
+<!-- ADD LATER -->
+
+
+
+
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Learning to see dirty data is the first step to cleaning it.</p>`
     ],
     quiz: [
       {
-        question: 'Which early activity reveals opportunities for validation rules and type casting?',
+        question: 'While scanning the sample CSV for missing data, which field immediately signals follow-up?',
         options: [
-          'Profiling null counts and categorical distributions',
-          'Jumping straight into training a predictive model',
-          'Skipping documentation to save preparation time'
+          'The blank Notes cell for January South',
+          'The Sales value of 49,000 in March North',
+          'The Units count of 200 in January South',
+          'The Returns total of 5 in March South'
         ],
         answerIndex: 0,
-        explanation: 'Profiling the data exposes null patterns and category balance before transformation.'
+        explanation: 'A missing note is easy to overlook but affects how teammates interpret the row, so it should be documented.'
       },
       {
-        question: 'What habit keeps teammates aligned on every data change you make?',
+        question: 'Which pattern best fits the definition of an outlier in the Interpreting Data sample?',
         options: [
-          'Documenting each cleaning step along with why it was applied',
-          'Only announcing major schema changes in chat',
-          'Deleting intermediate datasets once the model trains successfully'
+          'February South dropping to zero across every metric',
+          'March North increasing by 5,000 in sales',
+          'January North having 180 units',
+          'Returns holding between 4 and 6 each month'
         ],
         answerIndex: 0,
-        explanation: 'Written change logs maintain shared context and reproducibility.'
+        explanation: 'The across-the-board zero warrants investigation—it could be a true pause or missing data.'
+      },
+      {
+        question: 'What makes the “Total / All” row a candidate for special handling during cleaning?',
+        options: [
+          'It mixes aggregated labels with regular records',
+          'It contains negative numbers',
+          'It repeats the March North values',
+          'It is already filtered out by default'
+        ],
+        answerIndex: 0,
+        explanation: 'Summary rows need tagging or relocation so analytics tools do not treat them as standard observations.'
+      },
+      {
+        question: 'Why should cleaning steps be logged after you adjust the sample dataset?',
+        options: [
+          'Documented changes help others trust and reproduce the analysis',
+          'Notes automatically delete rows with missing values',
+          'Logging steps cancels the need for validation',
+          'Documentation forces you to rebuild the dataset from scratch'
+        ],
+        answerIndex: 0,
+        explanation: 'Sharing what changed—and why—keeps collaborators aligned and the dataset auditable.'
+      },
+      {
+        question: 'You discover multiple blanks in the Notes column—what is the best next step before removing those rows?',
+        options: [
+          'Review the surrounding context and confirm whether the information can be recovered',
+          'Delete the rows immediately so charts stay clean',
+          'Replace every blank with the word "Unknown" without checking the source',
+          'Ignore the blanks because the numeric columns are filled'
+        ],
+        answerIndex: 0,
+        explanation: 'Investigating context first preserves useful records and helps decide whether to impute, annotate, or drop.'
+      },
+      {
+        question: 'Within the Remove-Repair-Replace-Review workflow, which action is an example of the Replace step for the sample CSV?',
+        options: [
+          'Converting any "N/A" strings in Notes to blank values before analysis',
+          'Dropping the February South row because it contains zeros',
+          'Duplicating the dataset tab to preserve the raw import',
+          'Averaging Sales across months to fill all empty cells'
+        ],
+        answerIndex: 0,
+        explanation: 'Replace focuses on standardizing inconsistent text—turning placeholder strings like "N/A" into true blanks keeps filters and joins reliable.'
       }
     ]
   },
@@ -1637,8 +1748,8 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                       
                     </div>
                     <p className="mt-2 text-sm font-semibold text-blue-200">{currentQuizQuestion.question}</p>
-                    <div className="mt-2 flex flex-1 flex-col">
-                      <div className="max-h-64 overflow-y-auto no-scrollbar space-y-2">
+                    <div className="mt-2 flex flex-1 flex-col gap-3">
+                      <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
                         {currentQuizQuestion.options.map((option, optionIndex) => {
                           const isChecked = currentSelection === optionIndex;
                           const isCorrectOption = isCurrentSubmitted && optionIndex === currentQuizQuestion.answerIndex;
@@ -1670,7 +1781,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                           );
                         })}
                       </div>
-                      <div className="mt-3 text-xs">
+                      <div className="text-xs">
                         <button
                           type="button"
                           onClick={() => handleQuizSubmit(selectedTopic.anchor, totalQuizQuestions)}

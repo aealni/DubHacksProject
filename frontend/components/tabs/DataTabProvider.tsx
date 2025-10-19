@@ -349,13 +349,16 @@ const DataGridContent: React.FC = () => {
     [columns]
   );
   const displayRows = useMemo<GridRow[]>(() => gridData.slice(0, 200), [gridData]);
-  const pendingCount = useMemo(() => Object.keys(pendingEdits).length, [pendingEdits]);
-
   return (
     <div className="relative flex h-full w-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
-        <div>
-          <h2 className="text-sm font-semibold text-gray-900">Data Grid</h2>
+      <div className="flex items-center border-b border-gray-200 px-3 py-2">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-900">Data Grid</h2>
+            <span className="rounded border border-gray-300 bg-white px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+              Tab {tabId.slice(-4)}
+            </span>
+          </div>
           <div className="mt-0.5 text-xs text-gray-500">
             {selectedDataset ? (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -369,33 +372,6 @@ const DataGridContent: React.FC = () => {
               'Select or upload a dataset to begin'
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span
-            className={`uppercase tracking-wide ${
-              pendingCount > 0 ? 'text-gray-700' : 'text-gray-400'
-            }`}
-          >
-            {pendingCount > 0
-              ? `${pendingCount} unsaved change${pendingCount === 1 ? '' : 's'}`
-              : 'No unsaved edits'}
-          </span>
-          <button
-            type="button"
-            onClick={dataActions.discardPendingEdits}
-            disabled={pendingCount === 0 || isLoading || isSaving}
-            className="border border-gray-300 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Discard
-          </button>
-          <button
-            type="button"
-            onClick={dataActions.savePendingEdits}
-            disabled={pendingCount === 0 || isSaving || isLoading}
-            className="border border-gray-800 bg-gray-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-black disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
-          >
-            {isSaving ? 'Saving…' : 'Save' }
-          </button>
         </div>
       </div>
 
@@ -476,9 +452,6 @@ const DataGridContent: React.FC = () => {
         </div>
       )}
 
-      <div className="absolute top-3 right-3 rounded-none border border-gray-300 bg-white px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
-        Tab {tabId.slice(-4)}
-      </div>
     </div>
   );
 };

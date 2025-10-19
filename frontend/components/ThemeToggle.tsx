@@ -1,6 +1,11 @@
 import React from 'react';
 import useTheme from '../hooks/useTheme';
 
+interface ThemeToggleProps {
+  variant?: 'floating' | 'panel';
+  className?: string;
+}
+
 const SunIcon = () => (
   <svg
     className="h-5 w-5"
@@ -37,7 +42,7 @@ const MoonIcon = () => (
   </svg>
 );
 
-const ThemeToggle: React.FC = () => {
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'floating', className }) => {
   const { theme, toggleTheme, isReady } = useTheme();
 
   if (!isReady) {
@@ -46,11 +51,17 @@ const ThemeToggle: React.FC = () => {
 
   const isDark = theme === 'dark';
 
+  const baseClass = 'inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all duration-200';
+  const variantClass = variant === 'floating'
+    ? 'fixed top-6 right-6 z-[4000] h-11 w-11 rounded-full border border-slate-300 bg-white text-slate-700 shadow-lg hover:scale-105 hover:shadow-2xl focus-visible:ring-offset-2 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100'
+    : 'h-7 w-7 rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-offset-0 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-700';
+  const combinedClassName = [baseClass, variantClass, className].filter(Boolean).join(' ');
+
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      className="fixed top-6 right-6 z-[4000] inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100"
+      className={combinedClassName}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       <span className="sr-only">Toggle theme</span>
