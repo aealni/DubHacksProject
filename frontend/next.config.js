@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
+const isStaticExport = process.env.NEXT_STATIC_EXPORT === 'true';
+
 const nextConfig = {
-  output: 'export',
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
   images: {
@@ -20,6 +21,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true
   }
+}
+
+if (isStaticExport) {
+  nextConfig.output = 'export';
 }
 
 module.exports = nextConfig
