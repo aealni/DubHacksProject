@@ -6,6 +6,8 @@ interface FeatureBarProps {
   currentTool: CanvasTool;
   onChangeTool: (tool: CanvasTool) => void;
   onClearWorkspace: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
 }
 
 const tools: { id: CanvasTool; label: string; icon: JSX.Element; hint?: string }[] = [
@@ -32,7 +34,7 @@ const tools: { id: CanvasTool; label: string; icon: JSX.Element; hint?: string }
   )}
 ];
 
-export const FeatureBar: React.FC<FeatureBarProps> = ({ currentTool, onChangeTool, onClearWorkspace }) => {
+export const FeatureBar: React.FC<FeatureBarProps> = ({ currentTool, onChangeTool, onClearWorkspace, onZoomIn, onZoomOut }) => {
   return (
     <div className="pointer-events-auto flex items-center gap-1 px-3 py-2 rounded-full shadow-lg border border-slate-300/60 bg-white/80 backdrop-blur-md">
       {tools.map(tool => {
@@ -50,6 +52,27 @@ export const FeatureBar: React.FC<FeatureBarProps> = ({ currentTool, onChangeToo
           </button>
         );
       })}
+      <div className="w-px h-6 bg-slate-300 mx-1" />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onZoomOut}
+          className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-base font-semibold text-slate-600 transition hover:bg-slate-200 active:bg-slate-300"
+          title="Zoom out (-)"
+          aria-label="Zoom out"
+        >
+          -
+        </button>
+        <button
+          type="button"
+          onClick={onZoomIn}
+          className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-base font-semibold text-slate-600 transition hover:bg-slate-200 active:bg-slate-300"
+          title="Zoom in (+)"
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+      </div>
       <div className="w-px h-6 bg-slate-300 mx-1" />
       <button
         onClick={onClearWorkspace}

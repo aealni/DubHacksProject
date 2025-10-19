@@ -672,6 +672,40 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     });
   }, [viewport]);
 
+  const zoomCanvasBy = useCallback((factor: number) => {
+    const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewport.zoom * factor));
+    if (clampedZoom === viewport.zoom) {
+      return;
+    }
+
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) {
+      dispatch({ type: 'SET_VIEWPORT', payload: { zoom: clampedZoom } });
+      return;
+    }
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const zoomRatio = clampedZoom / viewport.zoom;
+
+    dispatch({
+      type: 'SET_VIEWPORT',
+      payload: {
+        zoom: clampedZoom,
+        x: centerX - (centerX - viewport.x) * zoomRatio,
+        y: centerY - (centerY - viewport.y) * zoomRatio
+      }
+    });
+  }, [viewport, dispatch]);
+
+  const handleZoomIn = useCallback(() => {
+    zoomCanvasBy(1.1);
+  }, [zoomCanvasBy]);
+
+  const handleZoomOut = useCallback(() => {
+    zoomCanvasBy(0.9);
+  }, [zoomCanvasBy]);
+
   // Handle mouse down for panning / marquee
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     console.debug('[InfiniteCanvas] handleMouseDown', { button: e.button, target: (e.target as HTMLElement)?.className || (e.target as HTMLElement)?.tagName });
@@ -2417,6 +2451,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
             setSelectedIds(new Set());
             clearWorkspace();
           }}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
         />
       </div>
         </>
