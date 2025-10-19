@@ -372,7 +372,19 @@ class AvailableColumnsResponse(BaseModel):
 # --- Modeling / Feature Lab Schemas ---
 class ModelTaskRequest(BaseModel):
     target: str
-    problem_type: Optional[Literal['auto','classification','regression']] = 'auto'
+    problem_type: Optional[Literal['auto','classification','regression','time_series']] = 'auto'
+    model_type: Literal[
+        'linear_regression',
+        'weighted_least_squares',
+        'ridge_regression',
+        'lasso_regression',
+        'polynomial_regression',
+        'logistic_regression',
+        'random_forest_regression',
+        'random_forest_classification',
+        'arima',
+        'sarima'
+    ] = 'linear_regression'
     include_columns: Optional[List[str]] = None  # whitelist
     exclude_columns: Optional[List[str]] = None  # blacklist (applied after include)
     test_size: float = 0.2
@@ -382,6 +394,18 @@ class ModelTaskRequest(BaseModel):
     encode_categoricals: Literal['auto','onehot','ordinal'] = 'auto'
     feature_interactions: bool = True
     top_n_importances: int = 30
+    cv_folds: Optional[int] = None
+    weight_column: Optional[str] = None
+    alpha: Optional[float] = None
+    polynomial_degree: Optional[int] = 2
+    n_estimators: Optional[int] = None
+    max_depth: Optional[int] = None
+    time_column: Optional[str] = None
+    forecast_horizon: Optional[int] = None
+    arima_order: Optional[List[int]] = None
+    seasonal_order: Optional[List[int]] = None
+    seasonal_periods: Optional[int] = None
+    return_diagnostics: bool = True
 
 class FeatureImportanceItem(BaseModel):
     feature: str
@@ -438,6 +462,7 @@ class ModelRunResponse(BaseModel):
     created_at: datetime
     completed_at: Optional[datetime] = None
     message: Optional[str] = None
+    time_series_details: Optional[Dict[str, Any]] = None
 
 class ListModelRunsResponse(BaseModel):
     runs: List[ModelRunResponse]
@@ -445,7 +470,19 @@ class ListModelRunsResponse(BaseModel):
 # --- Model Visualizations ---
 class ModelVisualRequest(BaseModel):
     run_id: str
-    kind: Literal['pred_vs_actual','residuals','confusion_matrix','roc','qq_plot','feature_importance','residuals_vs_fitted']
+    kind: Literal[
+        'pred_vs_actual',
+        'residuals',
+        'confusion_matrix',
+        'roc',
+        'qq_plot',
+        'feature_importance',
+        'residuals_vs_fitted',
+        'acf',
+        'pacf',
+        'ts_diagnostics',
+        'forecast'
+    ]
     max_points: int = 2000  # sampling cap for scatter-like visuals
 
 class ModelVisualResponse(BaseModel):

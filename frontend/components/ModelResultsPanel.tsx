@@ -39,17 +39,40 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
   };
 
   const modelResults = panel.data;
+  const hasFeatureImportance = Array.isArray(modelResults?.feature_importance) && modelResults.feature_importance.length > 0;
+
+  const formatStat = (value: unknown, digits = 3) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(digits) : 'N/A';
+  };
 
   const getVisualizationTitle = (type: string) => {
     switch (type) {
-      case 'pred_vs_actual': return 'Predicted vs Actual';
-      case 'residuals': return 'Residuals Distribution';
-      case 'qq_plot': return 'Q-Q Plot';
-      case 'residuals_vs_fitted': return 'Residuals vs Fitted';
-      case 'confusion_matrix': return 'Confusion Matrix';
-      case 'roc_curve': return 'ROC Curve';
-      case 'feature_importance': return 'Feature Importance';
-      default: return 'Model Visualization';
+      case 'pred_vs_actual':
+        return 'Predicted vs Actual';
+      case 'residuals':
+        return 'Residuals Distribution';
+      case 'qq_plot':
+        return 'Q-Q Plot';
+      case 'residuals_vs_fitted':
+        return 'Residuals vs Fitted';
+      case 'confusion_matrix':
+        return 'Confusion Matrix';
+      case 'roc':
+      case 'roc_curve':
+        return 'ROC Curve';
+      case 'feature_importance':
+        return 'Feature Importance';
+      case 'acf':
+        return 'Autocorrelation (ACF)';
+      case 'pacf':
+        return 'Partial Autocorrelation (PACF)';
+      case 'ts_diagnostics':
+        return 'Time-Series Diagnostics';
+      case 'forecast':
+        return 'Forecast';
+      default:
+        return 'Model Visualization';
     }
   };
 
@@ -65,21 +88,28 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
       return;
     }
 
+    const normalizedType = visualizationType === 'roc_curve' ? 'roc' : visualizationType;
+
     // Validate visualization type is supported
-    const supportedTypes = ['pred_vs_actual', 'residuals', 'qq_plot', 'residuals_vs_fitted', 'confusion_matrix', 'roc_curve', 'feature_importance'];
-    if (!supportedTypes.includes(visualizationType)) {
+    const supportedTypes = ['pred_vs_actual', 'residuals', 'qq_plot', 'residuals_vs_fitted', 'confusion_matrix', 'roc', 'feature_importance', 'acf', 'pacf', 'ts_diagnostics', 'forecast'];
+    if (!supportedTypes.includes(normalizedType)) {
       setError(`Unsupported visualization type: ${visualizationType}`);
       return;
     }
 
     // Validate problem type compatibility
-    if (modelResults.problem_type === 'regression' && ['confusion_matrix', 'roc_curve'].includes(visualizationType)) {
+    if (modelResults.problem_type === 'regression' && ['confusion_matrix', 'roc'].includes(normalizedType)) {
       setError(`${visualizationType} is only available for classification models`);
       return;
     }
 
-    if (modelResults.problem_type === 'classification' && ['residuals', 'qq_plot', 'residuals_vs_fitted'].includes(visualizationType)) {
-      setError(`${visualizationType} is only available for regression models`);
+    if (modelResults.problem_type === 'classification' && ['residuals', 'qq_plot', 'residuals_vs_fitted', 'acf', 'pacf', 'ts_diagnostics', 'forecast'].includes(normalizedType)) {
+      setError(`${visualizationType} is not available for classification models`);
+      return;
+    }
+
+    if (modelResults.problem_type === 'time_series' && ['confusion_matrix', 'roc', 'qq_plot', 'residuals_vs_fitted'].includes(normalizedType)) {
+      setError(`${visualizationType} is not available for time-series models`);
       return;
     }
 
@@ -100,7 +130,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
         },
         body: JSON.stringify({
           run_id: String(runId), // Backend expects string
-          kind: visualizationType,
+          kind: normalizedType,
           max_points: 2000
         }),
       });
@@ -112,7 +142,7 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
         
         const visualizationData = { 
           ...result, 
-          activeType: visualizationType,
+          activeType: normalizedType,
           datasetId: parseInt(datasetId),
           run_id: String(runId) // Keep as string for consistency
         };
@@ -156,6 +186,30 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
     } finally {
       setLoadingVisualization(false);
     }
+  };
+
+  const renderVisualizationButton = (
+    type: string,
+    label: string,
+    options: { spanFull?: boolean; variant?: 'default' | 'emphasis'; disabled?: boolean } = {}
+  ) => {
+    const { spanFull = false, variant = 'default', disabled = false } = options;
+    const baseClasses = 'px-3 py-2 border text-xs font-medium transition-colors rounded-none shadow-sm flex items-center justify-center space-x-2';
+    const variantClasses = variant === 'emphasis'
+      ? 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-800'
+      : 'bg-white hover:bg-gray-100 border-gray-300 text-gray-700';
+    const disabledState = disabled || loadingVisualization;
+
+    return (
+      <button
+        key={type}
+        onClick={() => requestVisualization(type)}
+        disabled={disabledState}
+        className={`${spanFull ? 'col-span-2 ' : ''}${baseClasses} ${variantClasses} disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        <span className="font-medium">{label}</span>
+      </button>
+    );
   };
 
   // Handle resize start
@@ -504,6 +558,51 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                 </div>
               )}
 
+              {/* Time-series details */}
+              {modelResults.problem_type === 'time_series' && modelResults.time_series_details && (
+                <div className="border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="text-sm font-medium text-gray-800">Time-Series Model Details</h5>
+                    <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 border border-gray-200 rounded-none">
+                      {modelResults.time_series_details.model_type?.toUpperCase() || 'ARIMA'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700">
+                    <div>
+                      <div className="font-medium text-gray-600 mb-1">Orders</div>
+                      <div>ARIMA: {Array.isArray(modelResults.time_series_details.order) ? modelResults.time_series_details.order.join(', ') : '—'}</div>
+                      {Array.isArray(modelResults.time_series_details.seasonal_order) && (
+                        <div>Seasonal: {modelResults.time_series_details.seasonal_order.join(', ')}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-600 mb-1">Observations</div>
+                      <div>Training: {modelResults.time_series_details.training_observations}</div>
+                      <div>Holdout: {modelResults.time_series_details.holdout_observations}</div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-600 mb-1">Date Range</div>
+                      <div>{modelResults.time_series_details.train_start} → {modelResults.time_series_details.train_end}</div>
+                      {modelResults.time_series_details.holdout_start && modelResults.time_series_details.holdout_end && (
+                        <div>Holdout: {modelResults.time_series_details.holdout_start} → {modelResults.time_series_details.holdout_end}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-600 mb-1">Forecast Horizon</div>
+                      <div>{modelResults.time_series_details.forecast_horizon} steps</div>
+                    </div>
+                  </div>
+                  {modelResults.time_series_details.diagnostics?.ljung_box && (
+                    <div className="mt-3 text-xs text-gray-700">
+                      <div className="font-medium text-gray-600 mb-1">Ljung–Box Test</div>
+                      <div>Statistic: {formatStat(modelResults.time_series_details.diagnostics.ljung_box.statistic)}</div>
+                      <div>p-value: {formatStat(modelResults.time_series_details.diagnostics.ljung_box.p_value)}</div>
+                      <div>Lags tested: {modelResults.time_series_details.diagnostics.ljung_box.lags_tested}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Visualization Buttons */}
               <div className="bg-white border border-gray-200 rounded-none p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
@@ -514,93 +613,54 @@ export const ModelResultsPanel: React.FC<ModelResultsPanelProps> = ({
                     Model Visualizations
                   </h5>
                   <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-none border border-gray-200">
-                    {modelResults.problem_type === 'regression' ? 'Regression' : 'Classification'}
+                    {modelResults.problem_type === 'regression'
+                      ? 'Regression'
+                      : modelResults.problem_type === 'classification'
+                      ? 'Classification'
+                      : 'Time Series'}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => requestVisualization('pred_vs_actual')}
-                    disabled={loadingVisualization}
-                    className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                  >
-                    <div className="flex items-center justify-center space-x-2">
-                      <span>📊</span>
-                      <span>Pred vs Actual</span>
-                    </div>
-                  </button>
-                  
+                  {renderVisualizationButton('pred_vs_actual', 'Pred vs Actual')}
+
+                  {(modelResults.problem_type === 'regression' || modelResults.problem_type === 'time_series') &&
+                    renderVisualizationButton('residuals', 'Residuals')}
+
                   {modelResults.problem_type === 'regression' && (
                     <>
-                      <button
-                        onClick={() => requestVisualization('residuals')}
-                        disabled={loadingVisualization}
-                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                      >
-                        <div className="flex items-center justify-center space-x-2">
-                          <span>📈</span>
-                          <span>Residuals</span>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => requestVisualization('qq_plot')}
-                        disabled={loadingVisualization}
-                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                      >
-                        <div className="flex items-center justify-center space-x-2">
-                          <span>📊</span>
-                          <span>Q-Q Plot</span>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => requestVisualization('residuals_vs_fitted')}
-                        disabled={loadingVisualization}
-                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                      >
-                        <div className="flex items-center justify-center space-x-2">
-                          <span>📈</span>
-                          <span>Residuals vs Fitted</span>
-                        </div>
-                      </button>
+                      {renderVisualizationButton('qq_plot', 'Q-Q Plot')}
+                      {renderVisualizationButton('residuals_vs_fitted', 'Residuals vs Fitted')}
                     </>
                   )}
 
                   {modelResults.problem_type === 'classification' && (
                     <>
-                      <button
-                        onClick={() => requestVisualization('confusion_matrix')}
-                        disabled={loadingVisualization}
-                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                      >
-                        <div className="flex items-center justify-center space-x-2">
-                          <span>📊</span>
-                          <span>Confusion Matrix</span>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => requestVisualization('roc_curve')}
-                        disabled={loadingVisualization}
-                        className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-none text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                      >
-                        <div className="flex items-center justify-center space-x-2">
-                          <span>📈</span>
-                          <span>ROC Curve</span>
-                        </div>
-                      </button>
+                      {renderVisualizationButton('confusion_matrix', 'Confusion Matrix')}
+                      {renderVisualizationButton('roc', 'ROC Curve')}
                     </>
                   )}
 
-                  <button
-                    onClick={() => requestVisualization('feature_importance')}
-                    disabled={loadingVisualization}
-                    className="col-span-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 rounded-none text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                  >
-                    <div className="flex items-center justify-center space-x-2">
-                      <span>⭐</span>
-                      <span>Feature Importance</span>
-                      <span className="text-xs opacity-75">(Recommended)</span>
-                    </div>
-                  </button>
+                  {modelResults.problem_type === 'time_series' && (
+                    <>
+                      {renderVisualizationButton('acf', 'Autocorrelation (ACF)')}
+                      {renderVisualizationButton('pacf', 'Partial Autocorrelation (PACF)')}
+                      {renderVisualizationButton('ts_diagnostics', 'Diagnostics', { spanFull: true })}
+                      {renderVisualizationButton('forecast', 'Forecast', { spanFull: true })}
+                    </>
+                  )}
+
+                  {renderVisualizationButton('feature_importance', 'Feature Importance', {
+                    spanFull: true,
+                    variant: 'emphasis',
+                    disabled: !hasFeatureImportance
+                  })}
                 </div>
+
+                {!hasFeatureImportance && (
+                  <div className="text-[11px] text-gray-500 mt-2">
+                    Feature importance is not available for this model type.
+                  </div>
+                )}
                 
                 {loadingVisualization && (
                   <div className="flex items-center justify-center mt-3 space-x-2">

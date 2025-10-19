@@ -1,6 +1,33 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
+type ModelOption = {
+  value: string;
+  label: string;
+  description?: string;
+};
+
+type ProblemTypeOption = 'auto' | 'regression' | 'classification' | 'time_series';
+
+const REGRESSION_MODEL_OPTIONS: ModelOption[] = [
+  { value: 'linear_regression', label: 'Linear Regression' },
+  { value: 'weighted_least_squares', label: 'Weighted Least Squares', description: 'Requires a weight column' },
+  { value: 'ridge_regression', label: 'Ridge Regression', description: 'L2 regularization with alpha' },
+  { value: 'lasso_regression', label: 'Lasso Regression', description: 'L1 regularization with alpha' },
+  { value: 'polynomial_regression', label: 'Polynomial Regression', description: 'Expands numeric features using PolynomialFeatures' },
+  { value: 'random_forest_regression', label: 'Random Forest Regressor' }
+];
+
+const CLASSIFICATION_MODEL_OPTIONS: ModelOption[] = [
+  { value: 'logistic_regression', label: 'Logistic Regression' },
+  { value: 'random_forest_classification', label: 'Random Forest Classifier' }
+];
+
+const TIME_SERIES_MODEL_OPTIONS: ModelOption[] = [
+  { value: 'arima', label: 'ARIMA' },
+  { value: 'sarima', label: 'SARIMA', description: 'Seasonal ARIMA with optional seasonal order' }
+];
 
 interface ModelPanelProps {
   panel: {
@@ -20,6 +47,7 @@ interface ModelPanelProps {
 
 export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, onCreateResultsPanel, isDragging = false }) => {
   const [modelType, setModelType] = useState('linear_regression');
+  const [problemType, setProblemType] = useState<ProblemTypeOption>('auto');
   const [targetColumn, setTargetColumn] = useState('');
   const [featureColumns, setFeatureColumns] = useState<string[]>([]);
   const [selectedXAxis, setSelectedXAxis] = useState(''); // For visualization when multiple features
@@ -32,9 +60,78 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, panelX: 0, panelY: 0 });
   const [lastTrainedConfig, setLastTrainedConfig] = useState<{target: string, features: string[]} | null>(null);
   const [hasManualResize, setHasManualResize] = useState(false);
+  const [testSize, setTestSize] = useState(0.2);
+  const [cvFolds, setCvFolds] = useState<number | ''>('');
+  const [weightColumn, setWeightColumn] = useState('');
+  const [alphaValue, setAlphaValue] = useState<string>('');
+  const [polynomialDegree, setPolynomialDegree] = useState(2);
+  const [nEstimators, setNEstimators] = useState<number | ''>('');
+  const [maxDepth, setMaxDepth] = useState<number | ''>('');
+  const [timeColumn, setTimeColumn] = useState('');
+  const [forecastHorizon, setForecastHorizon] = useState<number | ''>('');
+  const [arimaOrder, setArimaOrder] = useState('1,1,1');
+  const [seasonalOrder, setSeasonalOrder] = useState('1,1,1,12');
+  const [seasonalPeriods, setSeasonalPeriods] = useState<number | ''>('');
+  const [returnDiagnostics, setReturnDiagnostics] = useState(true);
 
   // Use the expanded state from the panel prop, default to false if not set
   const isExpanded = panel.isExpanded ?? true;
+
+  const availableModelOptions = useMemo(() => {
+    if (problemType === 'classification') {
+      return CLASSIFICATION_MODEL_OPTIONS;
+    }
+    if (problemType === 'time_series') {
+      return TIME_SERIES_MODEL_OPTIONS;
+    }
+    return REGRESSION_MODEL_OPTIONS;
+  }, [problemType]);
+
+  const isTimeSeriesModel = problemType === 'time_series' || modelType === 'arima' || modelType === 'sarima';
+
+  useEffect(() => {
+    if (!availableModelOptions.some(option => option.value === modelType)) {
+      const fallback = availableModelOptions[0]?.value ?? 'linear_regression';
+      setModelType(fallback);
+    }
+  }, [availableModelOptions, modelType]);
+
+  useEffect(() => {
+    if (problemType === 'time_series') {
+      setFeatureColumns([]);
+      setSelectedXAxis('');
+    }
+  }, [problemType]);
+
+  const availableFeatureColumns = useMemo(
+    () => availableColumns.filter(column => column !== targetColumn && column !== weightColumn && column !== timeColumn),
+    [availableColumns, targetColumn, weightColumn, timeColumn]
+  );
+
+  useEffect(() => {
+    setFeatureColumns(prev => prev.filter(column => column !== targetColumn && column !== weightColumn && column !== timeColumn));
+  }, [targetColumn, weightColumn, timeColumn]);
+
+  useEffect(() => {
+    if (selectedXAxis && !featureColumns.includes(selectedXAxis)) {
+      setSelectedXAxis(featureColumns[0] ?? '');
+    }
+  }, [featureColumns, selectedXAxis]);
+
+  const parseIntegerList = useCallback((input: string, expectedLength: number) => {
+    const parts = input
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+    if (parts.length !== expectedLength) {
+      throw new Error(`Expected ${expectedLength} comma-separated values`);
+    }
+    const values = parts.map(Number);
+    if (values.some(value => Number.isNaN(value))) {
+      throw new Error('All values must be integers');
+    }
+    return values.map(value => Math.trunc(value));
+  }, []);
   
   // Function to toggle expand state
   const toggleExpanded = () => {
@@ -129,6 +226,8 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
         return combined[0] ?? '';
       });
 
+      setWeightColumn(prev => (prev && combined.includes(prev) ? prev : ''));
+      setTimeColumn(prev => (prev && combined.includes(prev) ? prev : ''));
       setFeatureColumns(prev => prev.filter(col => combined.includes(col)));
       setSelectedXAxis(prev => (prev && combined.includes(prev) ? prev : combined[0] ?? ''));
     } catch (error) {
@@ -151,75 +250,188 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
 
   const trainModel = async () => {
     const datasetId = panel.data?.datasetId || panel.data?.dataset_id || panel.data?.id;
-    console.log('trainModel called', { targetColumn, featureColumns, datasetId, panelData: panel.data });
-    
+
     if (!datasetId) {
-      console.error('No datasetId found in panel data:', panel.data);
       setError('No dataset ID available');
       return;
     }
-    
+
     if (!targetColumn) {
       setError('Please select a target column');
       return;
     }
 
-    if (featureColumns.length === 0) {
+    const isTimeSeriesModel = problemType === 'time_series' || modelType === 'arima' || modelType === 'sarima';
+    const effectiveProblemType = isTimeSeriesModel ? 'time_series' : problemType;
+
+    if (!isTimeSeriesModel && featureColumns.length === 0) {
       setError('Please select at least one feature column');
       return;
     }
 
-    console.log('Starting model training with:', {
-      datasetId,
+    if (isTimeSeriesModel && !timeColumn) {
+      setError('Time-series models require selecting a time column');
+      return;
+    }
+
+    if (modelType === 'weighted_least_squares' && !weightColumn) {
+      setError('Weighted least squares requires selecting a weight column');
+      return;
+    }
+
+    if (weightColumn && weightColumn === targetColumn) {
+      setError('Weight column cannot be the same as the target column');
+      return;
+    }
+
+    const parsedTestSize = Number(testSize);
+    if (Number.isNaN(parsedTestSize) || parsedTestSize <= 0 || parsedTestSize >= 0.9) {
+      setError('Test size must be between 0 and 0.9');
+      return;
+    }
+
+    let parsedCvFolds: number | undefined;
+    if (cvFolds !== '') {
+      parsedCvFolds = Number(cvFolds);
+      if (!Number.isInteger(parsedCvFolds) || parsedCvFolds < 2) {
+        setError('Cross-validation folds must be an integer greater than or equal to 2');
+        return;
+      }
+    }
+
+    let parsedAlpha: number | undefined;
+    if (alphaValue.trim()) {
+      parsedAlpha = Number(alphaValue);
+      if (Number.isNaN(parsedAlpha) || parsedAlpha <= 0) {
+        setError('Alpha must be a positive number');
+        return;
+      }
+    }
+
+    let parsedNEstimators: number | undefined;
+    if (nEstimators !== '') {
+      parsedNEstimators = Number(nEstimators);
+      if (!Number.isInteger(parsedNEstimators) || parsedNEstimators <= 0) {
+        setError('Number of estimators must be a positive integer');
+        return;
+      }
+    }
+
+    let parsedMaxDepth: number | undefined;
+    if (maxDepth !== '') {
+      parsedMaxDepth = Number(maxDepth);
+      if (!Number.isInteger(parsedMaxDepth) || parsedMaxDepth <= 0) {
+        setError('Max depth must be a positive integer');
+        return;
+      }
+    }
+
+    let parsedForecastHorizon: number | undefined;
+    if (forecastHorizon !== '') {
+      parsedForecastHorizon = Number(forecastHorizon);
+      if (!Number.isInteger(parsedForecastHorizon) || parsedForecastHorizon <= 0) {
+        setError('Forecast horizon must be a positive integer');
+        return;
+      }
+    }
+
+    let parsedSeasonalPeriods: number | undefined;
+    if (seasonalPeriods !== '') {
+      parsedSeasonalPeriods = Number(seasonalPeriods);
+      if (!Number.isInteger(parsedSeasonalPeriods) || parsedSeasonalPeriods <= 0) {
+        setError('Seasonal periods must be a positive integer');
+        return;
+      }
+    }
+
+    if (modelType === 'polynomial_regression' && (!Number.isInteger(polynomialDegree) || polynomialDegree < 2)) {
+      setError('Polynomial degree must be an integer greater than or equal to 2');
+      return;
+    }
+
+    let arimaOrderValues: number[] | undefined;
+    let seasonalOrderValues: number[] | undefined;
+
+    if (isTimeSeriesModel) {
+      try {
+        arimaOrderValues = parseIntegerList(arimaOrder, 3);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Invalid ARIMA order');
+        return;
+      }
+
+      if (modelType === 'sarima') {
+        try {
+          seasonalOrderValues = parseIntegerList(seasonalOrder, 4);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Invalid seasonal order');
+          return;
+        }
+      }
+    }
+
+    const payload: Record<string, unknown> = {
+      target: targetColumn,
+      problem_type: effectiveProblemType,
       model_type: modelType,
-      target_column: targetColumn,
-      feature_columns: featureColumns
+      include_columns: !isTimeSeriesModel && featureColumns.length > 0 ? featureColumns : undefined,
+      test_size: parsedTestSize,
+      random_state: 42,
+      normalize_numeric: true,
+      encode_categoricals: 'auto',
+      feature_interactions: false,
+      cv_folds: parsedCvFolds,
+      weight_column: weightColumn || undefined,
+      alpha: (modelType === 'ridge_regression' || modelType === 'lasso_regression') ? parsedAlpha : undefined,
+      polynomial_degree: modelType === 'polynomial_regression' ? polynomialDegree : undefined,
+      n_estimators: modelType.startsWith('random_forest') ? parsedNEstimators : undefined,
+      max_depth: modelType.startsWith('random_forest') ? parsedMaxDepth : undefined,
+      return_diagnostics: returnDiagnostics
+    };
+
+    if (isTimeSeriesModel) {
+      payload.problem_type = 'time_series';
+      payload.model_type = modelType;
+      payload.time_column = timeColumn;
+      payload.include_columns = undefined;
+      payload.forecast_horizon = parsedForecastHorizon;
+      payload.arima_order = arimaOrderValues;
+      payload.seasonal_order = modelType === 'sarima' ? seasonalOrderValues : undefined;
+      payload.seasonal_periods = modelType === 'sarima' ? parsedSeasonalPeriods : undefined;
+      payload.cv_folds = undefined;
+      payload.weight_column = undefined;
+    }
+
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined || payload[key] === null) {
+        delete payload[key];
+      }
     });
 
     setIsTraining(true);
     setError(null);
 
     try {
-      const requestBody = {
-        target: targetColumn,
-        problem_type: 'regression', // Since we only support linear regression for now
-        include_columns: featureColumns.length > 0 ? featureColumns : undefined,
-        test_size: 0.2,
-        random_state: 42,
-        normalize_numeric: true,
-        encode_categoricals: 'auto',
-        feature_interactions: false // Keep it simple for now
-      };
-      
-      console.log('Sending request to:', `${BACKEND_URL}/datasets/${parseInt(datasetId)}/model/runs`);
-      console.log('Request body:', requestBody);
-      
       const response = await fetch(`${BACKEND_URL}/datasets/${parseInt(datasetId)}/model/runs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(payload),
       });
-
-      console.log('Training response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Training result:', result);
-        
-        // Update last trained config for auto-update comparison
         setLastTrainedConfig({
           target: targetColumn,
           features: [...featureColumns]
         });
-        
-        // Create a new results panel with the model results
+
         if (onCreateResultsPanel) {
           const resultsData = {
             run_id: result.run_id,
-            datasetId: result.dataset_id, // Use consistent naming
-            dataset_id: result.dataset_id, // Keep original for compatibility
+            datasetId: result.dataset_id,
+            dataset_id: result.dataset_id,
             metrics: result.metrics,
             summary: result.summary,
             feature_importance: result.feature_importance,
@@ -229,26 +441,19 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
             problem_type: result.problem_type,
             created_at: result.created_at,
             completed_at: result.completed_at,
-            autoCreateVisualization: true, // Always auto-create visualization
+            autoCreateVisualization: true,
             modelConfig: {
               target: targetColumn,
               features: featureColumns,
-              problem_type: 'regression',
-              selectedXAxis: selectedXAxis
+              problem_type: payload.problem_type,
+              selectedXAxis
             }
           };
-          
+
           onCreateResultsPanel(resultsData);
-          
-          // Always auto-create regression visualization for regression models
-          // The InfiniteCanvas will handle this via the autoCreateVisualization flag
-        } else {
-          console.warn('onCreateResultsPanel callback not provided');
         }
-        
       } else {
         const errorText = await response.text();
-        console.error('Training failed with status:', response.status, 'Error:', errorText);
         try {
           const errorData = JSON.parse(errorText);
           setError(errorData.detail || 'Failed to train model');
@@ -256,19 +461,20 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
           setError(`Failed to train model (status: ${response.status})`);
         }
       }
-    } catch (error) {
-      console.error('Training error:', error);
-      setError('Failed to train model: ' + (error instanceof Error ? error.message : String(error)));
+    } catch (err) {
+      setError('Failed to train model: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsTraining(false);
     }
   };
 
-  const modelTypes = [
-    { value: 'linear_regression', label: 'Linear Regression', icon: '' }
-  ];
-
   const handleColumnToggle = (column: string) => {
+    if (isTimeSeriesModel) {
+      return;
+    }
+    if (!availableFeatureColumns.includes(column)) {
+      return;
+    }
     const newFeatureColumns = featureColumns.includes(column) 
       ? featureColumns.filter(c => c !== column)
       : [...featureColumns, column];
@@ -289,7 +495,10 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
   // Removed auto-update effect - no more automatic retraining on feature changes
 
   const handleSelectAllFeatures = () => {
-    const allFeatures = availableColumns.filter(col => col !== targetColumn);
+    if (isTimeSeriesModel) {
+      return;
+    }
+    const allFeatures = availableFeatureColumns;
     setFeatureColumns(allFeatures);
     if (allFeatures.length > 0 && !selectedXAxis) {
       setSelectedXAxis(allFeatures[0]);
@@ -423,7 +632,19 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Model Type Selection */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Problem Type</label>
+                  <select
+                    value={problemType}
+                    onChange={(e) => setProblemType(e.target.value as ProblemTypeOption)}
+                    className="w-full border border-gray-300 bg-white px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  >
+                    <option value="auto">Auto (let the backend infer)</option>
+                    <option value="regression">Regression</option>
+                    <option value="classification">Classification</option>
+                    <option value="time_series">Time Series</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Model Type</label>
                   <select
@@ -431,15 +652,16 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                     onChange={(e) => setModelType(e.target.value)}
                     className="w-full border border-gray-300 bg-white px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
                   >
-                    {modelTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.icon} {type.label}
+                    {availableModelOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    {availableModelOptions.find(option => option.value === modelType)?.description || 'Select the algorithm you want to run.'}
+                  </p>
                 </div>
-
-                {/* Target Column Selection */}
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Target Column</label>
                   <select
@@ -453,7 +675,220 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                     ))}
                   </select>
                 </div>
+                {isTimeSeriesModel ? (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Time Column</label>
+                    <select
+                      value={timeColumn}
+                      onChange={(e) => setTimeColumn(e.target.value)}
+                      className="w-full border border-gray-300 bg-white px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    >
+                      <option value="">Select time column...</option>
+                      {availableColumns.map((column) => (
+                        <option key={column} value={column}>{column}</option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[11px] text-gray-500">Used to order observations for ARIMA/SARIMA models.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Weight Column (optional)</label>
+                    <select
+                      value={weightColumn}
+                      onChange={(e) => setWeightColumn(e.target.value)}
+                      className="w-full border border-gray-300 bg-white px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    >
+                      <option value="">No weights</option>
+                      {availableColumns
+                        .filter(column => column !== targetColumn && column !== timeColumn)
+                        .map((column) => (
+                          <option key={column} value={column}>{column}</option>
+                        ))}
+                    </select>
+                    <p className="mt-1 text-[11px] text-gray-500">Required for weighted least squares, optional for other models.</p>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Test Size</label>
+                  <input
+                    type="number"
+                    min={0.05}
+                    max={0.9}
+                    step={0.05}
+                    value={testSize}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setTestSize(value === '' ? 0.2 : Number(value));
+                    }}
+                    className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500">Fraction of data reserved for evaluation.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Cross-Validation Folds</label>
+                  <input
+                    type="number"
+                    min={2}
+                    step={1}
+                    value={cvFolds}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setCvFolds(value === '' ? '' : Number(value));
+                    }}
+                    placeholder="Optional"
+                    disabled={isTimeSeriesModel}
+                    className={`w-full border px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+                      isTimeSeriesModel ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' : 'border-gray-300 bg-white'
+                    }`}
+                  />
+                  {isTimeSeriesModel && (
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Cross-validation is not available for time-series models.
+                    </p>
+                  )}
+                </div>
               </div>
+
+              {(modelType === 'ridge_regression' || modelType === 'lasso_regression') && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Regularization Strength (alpha)</label>
+                  <input
+                    type="number"
+                    min={0.0001}
+                    step={0.1}
+                    value={alphaValue}
+                    onChange={(e) => setAlphaValue(e.target.value)}
+                    placeholder="Defaults to backend value if left blank"
+                    className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  />
+                </div>
+              )}
+
+              {modelType === 'polynomial_regression' && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Polynomial Degree</label>
+                  <input
+                    type="number"
+                    min={2}
+                    step={1}
+                    value={polynomialDegree}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      setPolynomialDegree(Number.isNaN(value) ? 2 : Math.max(2, Math.round(value)));
+                    }}
+                    className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  />
+                </div>
+              )}
+
+              {modelType.startsWith('random_forest') && (
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Estimators</label>
+                    <input
+                      type="number"
+                      min={50}
+                      step={50}
+                      value={nEstimators}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNEstimators(value === '' ? '' : Number(value));
+                      }}
+                      placeholder="Defaults to 300"
+                      className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Max Depth</label>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={maxDepth}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setMaxDepth(value === '' ? '' : Number(value));
+                      }}
+                      placeholder="Unlimited"
+                      className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {isTimeSeriesModel && (
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Forecast Horizon (steps)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={forecastHorizon}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setForecastHorizon(value === '' ? '' : Number(value));
+                        }}
+                        placeholder="Defaults to holdout or 12"
+                        className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Return Diagnostics</label>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={returnDiagnostics}
+                          onChange={(e) => setReturnDiagnostics(e.target.checked)}
+                          className="h-3.5 w-3.5 border border-gray-300 text-gray-600 focus:ring-gray-500"
+                        />
+                        <span>Include ACF/PACF and residual checks</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">ARIMA Order (p,d,q)</label>
+                      <input
+                        type="text"
+                        value={arimaOrder}
+                        onChange={(e) => setArimaOrder(e.target.value)}
+                        className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      />
+                    </div>
+                    {modelType === 'sarima' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Seasonal Order (P,D,Q,s)</label>
+                        <input
+                          type="text"
+                          value={seasonalOrder}
+                          onChange={(e) => setSeasonalOrder(e.target.value)}
+                          className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                        />
+                        <p className="mt-1 text-[11px] text-gray-500">Last value is the seasonal period.</p>
+                      </div>
+                    )}
+                    {modelType === 'sarima' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Seasonal Periods</label>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={seasonalPeriods}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSeasonalPeriods(value === '' ? '' : Number(value));
+                          }}
+                          placeholder="Optional if provided in seasonal order"
+                          className="w-full border border-gray-300 px-2.5 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Feature Selection Section */}
@@ -462,13 +897,14 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                 <div>
                   <h4 className="text-sm font-medium text-gray-800">Feature Selection</h4>
                   <p className="text-xs text-gray-500">
-                    {featureColumns.length} of {availableColumns.filter(col => col !== targetColumn).length} features selected
+                    {featureColumns.length} of {availableFeatureColumns.length} features selected
                   </p>
                 </div>
                 <div className="flex space-x-2">
                   <button
                     onClick={handleSelectAllFeatures}
-                    className="border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                    className={`border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 ${isTimeSeriesModel ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                    disabled={isTimeSeriesModel}
                   >
                     Select All
                   </button>
@@ -480,11 +916,10 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                   </button>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto">
-                {availableColumns
-                  .filter(column => column !== targetColumn)
-                  .map((column) => {
+
+              {!isTimeSeriesModel ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto">
+                  {availableFeatureColumns.map((column) => {
                     const isSelected = featureColumns.includes(column);
                     return (
                       <button
@@ -524,11 +959,16 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                       </button>
                     );
                   })}
-              </div>
-              
-              {availableColumns.filter(col => col !== targetColumn).length === 0 && (
+                </div>
+              ) : (
                 <div className="py-6 text-center text-xs text-gray-500">
-                  No features available. Please select a target column first.
+                  Feature selection is not required for time-series models.
+                </div>
+              )}
+
+              {!isTimeSeriesModel && availableFeatureColumns.length === 0 && (
+                <div className="py-6 text-center text-xs text-gray-500">
+                  No features available. Please adjust your column selections.
                 </div>
               )}
             </div>
