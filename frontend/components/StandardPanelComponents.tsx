@@ -16,10 +16,10 @@ export const StandardPanelControls: React.FC<StandardPanelControlsProps> = ({
   className = ""
 }) => {
   return (
-    <div className={`flex items-center justify-between bg-gray-50 border-b border-gray-200 px-2.5 py-2 ${className}`}>
+    <div className={`flex items-center justify-between bg-gray-50 border-b border-gray-200 px-2.5 py-2 dark:bg-slate-800 dark:border-slate-700 ${className}`}>
       <div className="flex items-center space-x-2">
         {title && (
-          <h3 className="text-xs font-medium text-gray-700 truncate uppercase tracking-wide">{title}</h3>
+          <h3 className="text-xs font-medium text-gray-700 truncate uppercase tracking-wide dark:text-slate-200">{title}</h3>
         )}
       </div>
       
@@ -27,7 +27,7 @@ export const StandardPanelControls: React.FC<StandardPanelControlsProps> = ({
         {/* Expand/Collapse Button */}
         <button
           onClick={onToggleExpand}
-          className="inline-flex h-6 w-6 items-center justify-center border border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors"
+          className="inline-flex h-6 w-6 items-center justify-center border border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors dark:text-slate-300 dark:hover:text-slate-100 dark:hover:border-slate-500"
           title={isExpanded ? "Collapse panel" : "Expand panel"}
         >
           <svg 
@@ -49,7 +49,7 @@ export const StandardPanelControls: React.FC<StandardPanelControlsProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="inline-flex h-6 w-6 items-center justify-center border border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors"
+            className="inline-flex h-6 w-6 items-center justify-center border border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors dark:text-slate-300 dark:hover:text-slate-100 dark:hover:border-slate-500"
             title="Close panel"
           >
             <svg 
@@ -107,7 +107,7 @@ export const StandardPanelWrapper: React.FC<StandardPanelWrapperProps> = ({
   };
 
   return (
-    <div className={`bg-white border border-gray-200 shadow-sm overflow-hidden ${className}`}>
+  <div className={`bg-white border border-gray-200 shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-700 ${className}`}>
       <StandardPanelControls
         isExpanded={isExpanded}
         onToggleExpand={handleToggleExpand}
@@ -123,7 +123,7 @@ export const StandardPanelWrapper: React.FC<StandardPanelWrapperProps> = ({
       {/* Collapsed Content */}
       {!isExpanded && (
         <div className="p-3 text-center">
-          <p className="text-[11px] uppercase tracking-wide text-slate-400">Expand to view</p>
+          <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Expand to view</p>
         </div>
       )}
     </div>

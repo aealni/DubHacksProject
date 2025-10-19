@@ -1208,7 +1208,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
 
   // Shared styling for small overlay icon buttons to ensure consistent hit area & avoid drag conflicts
   // Unified small icon button styling (match + / x: backgroundless, crisp icon)
-  const overlayIconButtonClass = "no-drag inline-flex items-center justify-center h-5 w-5 rounded-none bg-transparent text-slate-600 hover:text-slate-900 transition-colors";
+  const overlayIconButtonClass = "no-drag inline-flex items-center justify-center h-5 w-5 rounded-none bg-transparent text-slate-600 hover:text-slate-900 transition-colors dark:text-slate-300 dark:hover:text-slate-100";
 
   // Remove panel function
   const removePanel = useCallback((panelId: string) => {
@@ -2232,7 +2232,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
             >
               {/* Panel Overlay Controls - Compact row for long titles */}
               <div
-                className="absolute top-1 right-1 flex items-center gap-0.5 z-50 bg-white/90 backdrop-blur-sm rounded-none px-1 py-0.5 shadow-sm"
+                className="absolute top-1 right-1 flex items-center gap-0.5 z-50 bg-white/90 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-700/60 backdrop-blur-sm rounded-none px-1 py-0.5 shadow-sm dark:shadow-slate-900/40"
                 onMouseDown={(e) => { e.stopPropagation(); }}
                 onClick={(e) => { e.stopPropagation(); }}
               >

@@ -50,7 +50,7 @@ const ThemeToggle: React.FC = () => {
     <button
       type="button"
       onClick={toggleTheme}
-      className="fixed bottom-6 right-6 z-[4000] inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100"
+      className="fixed top-6 right-6 z-[4000] inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100"
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       <span className="sr-only">Toggle theme</span>
