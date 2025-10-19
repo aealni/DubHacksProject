@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, Unlock, Eye, EyeOff, Plus, X, GripVertical, GitMerge } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { Home, Lock, Unlock, Eye, EyeOff, Plus, X, GripVertical, GitMerge } from 'lucide-react';
 import { Panel, Folder } from '../utils/canvas/types';
 
 interface LayersPanelProps {
@@ -43,6 +44,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onToggleCollapse,
   onPanelLockToggle
 }) => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPanelId, setEditingPanelId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -55,6 +57,9 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const dragDisabled = searchTerm.trim().length > 0;
   const draggedPanel = panels.find(p => p.id === draggedPanelId);
+  const homeButtonStyle: React.CSSProperties = isCollapsed
+    ? { top: 'calc(100% + 0.75rem)', left: '50%', transform: 'translateX(-50%)' }
+    : { top: '1rem', left: '1rem', transform: 'translateX(0)' };
 
   // Unified small icon button styling to match + / x visuals used across app
   const smallIconBtn = "inline-flex items-center justify-center h-7 w-7 rounded-md bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors";
@@ -280,7 +285,11 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+      <div
+        className={`relative flex items-center border-b border-slate-200 bg-slate-50 transition-all duration-300 ${
+          isCollapsed ? 'p-3' : 'p-4 pl-14'
+        }`}
+      >
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,12 +303,22 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         )}
         <button
           onClick={onToggleCollapse}
-          className="p-1.5 rounded-md hover:bg-slate-200 transition-colors"
+          className="ml-auto p-1.5 rounded-md hover:bg-slate-200 transition-colors"
           title={isCollapsed ? "Expand layers panel" : "Collapse layers panel"}
         >
           <svg className={`w-4 h-4 text-slate-600 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
           </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push('/')}
+          className={`${smallIconBtn} absolute transition-all duration-300`}
+          style={homeButtonStyle}
+          title="Go to home"
+          aria-label="Go to home"
+        >
+          <Home className="w-4 h-4" />
         </button>
       </div>
 

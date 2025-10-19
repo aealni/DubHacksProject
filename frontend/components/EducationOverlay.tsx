@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Bookmark, BookmarkX, X as XIcon } from 'lucide-react';
 
 interface EducationOverlayProps {
   isOpen: boolean;
@@ -373,6 +374,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   }, []);
 
   const selectedTopic = selectedTopicAnchor ? topicMap.get(selectedTopicAnchor) : undefined;
+  const iconButtonClasses = 'inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 text-amber-200 transition hover:bg-amber-300 hover:text-slate-900';
 
   const isTopicCompleted = useCallback(
     (anchor: string) => completedAnchors.includes(anchor),
@@ -828,6 +830,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   );
 
   const detailCompleted = selectedTopic ? isTopicCompleted(selectedTopic.anchor) : false;
+  const detailIsBookmarked = selectedTopic ? bookmarkedAnchors.includes(selectedTopic.anchor) : false;
 
   useEffect(() => {
     if (!selectedTopic || detailTab !== 'content') {
@@ -879,10 +882,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               onClick={() => {
                 onClose();
               }}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-amber-400 text-lg text-amber-200 transition hover:bg-amber-400 hover:text-slate-950"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-amber-400 text-sm text-amber-200 transition hover:bg-amber-400 hover:text-slate-950"
               aria-label="Close education overlay"
             >
-              X
+              <XIcon className="h-3.5 w-3.5" />
             </button>
             <div className="no-scrollbar h-full max-h-[90vh] space-y-6 overflow-y-auto p-8 pr-6 text-left text-slate-100">
               <div className="space-y-2">
@@ -897,16 +900,24 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                 <h3 className="text-lg font-semibold text-amber-200">Bookmarks</h3>
                 {bookmarkedTopics.length === 0 ? (
                   <p className="mt-2 text-xs text-slate-400">
-                    Tap <span className="font-semibold text-amber-100">Bookmark</span> on any topic to collect it here for quick access.
+                    Tap the <span className="font-semibold text-amber-100">bookmark icon</span> on any topic to collect it here for quick access.
                   </p>
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {bookmarkedTopics.map((topic) => {
                       const completed = isTopicCompleted(topic.anchor);
                       return (
-                        <li key={`bookmark-${topic.anchor}`} className="rounded-lg border border-slate-700/60 bg-slate-800/60 p-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
+                        <li key={`bookmark-${topic.anchor}`} className="relative rounded-lg border border-slate-700/60 bg-slate-800/60 p-3">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBookmark(topic.anchor)}
+                            className={`${iconButtonClasses} absolute top-3 right-3`}
+                            aria-label={`Remove ${topic.title} from bookmarks`}
+                          >
+                            <BookmarkX className="h-4 w-4" />
+                          </button>
+                          <div className="pr-10">
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleLearn(topic.anchor)}
@@ -914,32 +925,18 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                               >
                                 {topic.title}
                               </button>
-                              <p className="mt-1 text-xs text-slate-400">{topic.description}</p>
+                              {completed && <CompletedBadge />}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveBookmark(topic.anchor)}
-                              className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-300 text-xs text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-                              aria-label={`Remove ${topic.title} from bookmarks`}
-                            >
-                              X
-                            </button>
+                            <p className="mt-1 text-xs text-slate-400">{topic.description}</p>
                           </div>
                           <div className="mt-3 flex flex-wrap items-center gap-2">
                             <div className="flex flex-wrap gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleLearn(topic.anchor)}
-                                className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                                className="inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-900 transition hover:bg-amber-200"
                               >
                                 Learn topic
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleBookmarkToggle(topic.anchor)}
-                                className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-                              >
-                                {bookmarkedAnchors.includes(topic.anchor) ? 'Unbookmark topic' : 'Bookmark topic'}
                               </button>
                               <button
                                 type="button"
@@ -955,11 +952,6 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                                 {completed ? 'Mark incomplete' : 'Mark complete'}
                               </button>
                             </div>
-                            {completed && (
-                              <div className="ml-auto">
-                                <CompletedBadge />
-                              </div>
-                            )}
                           </div>
                         </li>
                       );
@@ -976,12 +968,22 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                 <ul className="space-y-3">
                   {topics.map((topic) => {
                     const completed = isTopicCompleted(topic.anchor);
+                    const isBookmarked = bookmarkedAnchors.includes(topic.anchor);
                     return (
                       <li
                         key={topic.anchor}
-                        className="flex flex-col rounded-lg border border-slate-700/60 bg-slate-800/60 p-4 transition hover:border-amber-300/60"
+                        className="relative flex flex-col rounded-lg border border-slate-700/60 bg-slate-800/60 p-4 transition hover:border-amber-300/60"
                       >
-                        <div className="flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleBookmarkToggle(topic.anchor)}
+                          className={`${iconButtonClasses} absolute right-4 top-4`}
+                          aria-label={isBookmarked ? `Remove ${topic.title} from bookmarks` : `Bookmark ${topic.title}`}
+                          title={isBookmarked ? 'Unbookmark topic' : 'Bookmark topic'}
+                        >
+                          {isBookmarked ? <BookmarkX className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                        </button>
+                        <div className="flex items-center gap-2 pr-10">
                           <span className="text-base font-medium text-slate-100">{topic.title}</span>
                           {completed && <CompletedBadge />}
                         </div>
@@ -990,16 +992,9 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                           <button
                             type="button"
                             onClick={() => handleLearn(topic.anchor)}
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                            className="inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-900 transition hover:bg-amber-200"
                           >
                             Learn topic
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleBookmarkToggle(topic.anchor)}
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-                          >
-                            {bookmarkedAnchors.includes(topic.anchor) ? 'Unbookmark topic' : 'Bookmark topic'}
                           </button>
                           <button
                             type="button"
@@ -1064,7 +1059,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-400 text-sm text-amber-200 transition hover:bg-amber-400 hover:text-slate-900"
               aria-label="Close topic details"
             >
-              X
+              <XIcon className="h-4 w-4" />
             </button>
           </div>
           <div className="mt-4 flex gap-2 rounded-full bg-slate-800/60 p-1">
@@ -1208,7 +1203,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               onClick={() => handleBookmarkToggle(selectedTopic.anchor)}
               className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
             >
-              {bookmarkedAnchors.includes(selectedTopic.anchor) ? 'Unbookmark' : 'Bookmark'}
+              {detailIsBookmarked ? 'Unbookmark' : 'Bookmark'}
             </button>
             <button
               type="button"
@@ -1261,6 +1256,20 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             onPointerCancel={handleResizePointerUp}
             aria-hidden="true"
             />
+            <div
+                className="absolute top-1 left-1/2 h-4 w-4 -translate-x-1/2 transform "
+                style={{
+                    background: `
+                    linear-gradient(0deg, transparent 45%, white 45%, white 55%, transparent 55%),
+                    linear-gradient(0deg, transparent 70%, white 70%, white 80%, transparent 80%)
+                    `,
+                }}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                aria-hidden="true"
+                />
+
 
 
         </aside>

@@ -2383,18 +2383,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
           </div>
         </div>
       )}
-
-      {/* Controls */}
-      <div className="absolute top-4 right-4 pointer-events-auto">
-        <button
-          onClick={clearWorkspace}
-          className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm hover:bg-gray-50 text-red-600"
-          title="Clear all panels and reset workspace"
-        >
-          Clear
-        </button>
-      </div>
-
       {/* Layers Panel */}
       <LayersPanel
         panels={panels}
@@ -2425,7 +2413,10 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         <FeatureBar
           currentTool={currentTool}
           onChangeTool={(t) => setCurrentTool(t)}
-          onClearSelection={() => setSelectedIds(new Set())}
+          onClearWorkspace={() => {
+            setSelectedIds(new Set());
+            clearWorkspace();
+          }}
         />
       </div>
         </>
