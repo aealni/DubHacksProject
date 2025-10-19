@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { Lock, Unlock, Eye, EyeOff } from 'lucide-react';
 import { DatasetPanel } from './DatasetPanel';
 import { GraphPanel } from './GraphPanel';
+import GraphResultPanel from './GraphResultPanel';
 import { ModelPanel } from './ModelPanel';
 import { DataManipulationPanel } from './DataManipulationPanel';
 import { DataEditorPanel } from './DataEditorPanel';
@@ -48,6 +49,35 @@ import { PANEL_SIZES } from '../utils/canvas/panelSizes';
 
 interface InfiniteCanvasProps {
   storageKey?: string;
+}
+
+interface GraphGenerationResult {
+  panelId: string;
+  datasetId: number | string;
+  datasetName?: string;
+  graphType: string;
+  title: string;
+  graphData: any;
+  titleOverride?: string;
+  xLabelOverride?: string;
+  yLabelOverride?: string;
+  lineStyle?: string;
+  lineColor?: string;
+  xColumn?: string;
+  yColumn?: string;
+  column?: string;
+  columns?: string[];
+  yColumns?: string[];
+  groupBy?: string;
+  colorBy?: string;
+  sizeBy?: string;
+  aggregation?: string;
+  customPlot?: {
+    function: string;
+    module: string;
+    args?: any[];
+    kwargs?: Record<string, any>;
+  };
 }
 
 export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ 
@@ -261,6 +291,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     hasEverSavedRef.current = true;
     console.log(`Saved workspace data for ${storageKey}:`, { panelIds: panels.map(p=>p.id), count: panels.length });
   }, [viewport, panels, connections, folders, selectedPanelId, visiblePanels, processedPanelIds, panelInteractionOrder, isLayersPanelCollapsed, storageKey]);
+
+  const latestSaveWorkspaceRef = useRef(saveWorkspace);
+
+  useEffect(() => {
+    latestSaveWorkspaceRef.current = saveWorkspace;
+  }, [saveWorkspace]);
 
   const loadWorkspace = useCallback(() => {
     try {
@@ -601,14 +637,15 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       console.log(`InfiniteCanvas unmounting for storageKey: ${storageKey}`);
       // Ensure we persist latest state before clearing local reducer (CLEAR_WORKSPACE only affects in-memory state)
       try {
-        console.log('[InfiniteCanvas] Saving workspace during unmount (panels:', panels.length, ')');
-        saveWorkspace();
+        const panelCount = panelsRef.current?.length ?? 0;
+        console.log('[InfiniteCanvas] Saving workspace during unmount (panels:', panelCount, ')');
+        latestSaveWorkspaceRef.current?.();
       } catch (e) {
         console.warn('Failed to save workspace on unmount', e);
       }
       dispatch({ type: 'CLEAR_WORKSPACE' });
     };
-  }, []); // Intentionally empty deps
+  }, [storageKey]);
 
   // Convert screen coordinates to canvas coordinates
   const screenToCanvas = useCallback((screenX: number, screenY: number) => {
@@ -1094,6 +1131,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     const sizeConfig = {
       'dataset': PANEL_SIZES.DATASET,
       'graph': PANEL_SIZES.GRAPH,
+      'graph-result': PANEL_SIZES.GRAPH_RESULT,
       'model': PANEL_SIZES.MODEL,
       'model-results': PANEL_SIZES.MODEL_RESULTS,
       'model-visualization': PANEL_SIZES.MODEL_VISUALIZATION,
@@ -1258,11 +1296,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       type: 'graph',
       x: datasetPanel.x + datasetPanel.width + PANEL_SPACING,
       y: datasetPanel.y,
-      width: PANEL_SIZES.GRAPH.collapsed.width,
-      height: PANEL_SIZES.GRAPH.collapsed.height,
+      width: PANEL_SIZES.GRAPH.expanded.width,
+      height: PANEL_SIZES.GRAPH.expanded.height,
       data: graphData,
       parentId: datasetPanelId,
-      isExpanded: false
+      isExpanded: true
     };
     dispatch({ type: 'ADD_PANEL', payload: newPanel });
     bringPanelToFront(newPanel.id); // Bring new panel to front
@@ -1278,7 +1316,115 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       type: 'SET_CONNECTIONS',
       payload: [...connections, newConnection]
     });
-  }, [panels, bringPanelToFront]);
+  }, [panels, bringPanelToFront, connections, dispatch]);
+
+  const addGraphResultPanel = useCallback((graphPanelId: string, payload: GraphGenerationResult) => {
+    const graphPanel = panels.find(p => p.id === graphPanelId);
+    if (!graphPanel) return null;
+
+    const timestamp = Date.now();
+    const baseResultData = {
+      datasetId: payload.datasetId,
+      datasetName: payload.datasetName,
+      graphType: payload.graphType,
+      titleOverride: payload.titleOverride,
+      xLabelOverride: payload.xLabelOverride,
+      yLabelOverride: payload.yLabelOverride,
+      lineStyle: payload.lineStyle,
+      lineColor: payload.lineColor,
+      xColumn: payload.xColumn,
+      yColumn: payload.yColumn,
+      column: payload.column,
+      columns: payload.columns,
+      yColumns: payload.yColumns,
+      groupBy: payload.groupBy,
+      colorBy: payload.colorBy,
+      sizeBy: payload.sizeBy,
+      aggregation: payload.aggregation,
+      title: payload.title,
+      graphData: payload.graphData,
+      customPlot: payload.customPlot,
+      generatedAt: new Date().toISOString()
+    };
+
+    const existingResultPanelId = graphPanel.data?.resultPanelId as string | undefined;
+    if (existingResultPanelId) {
+      const existingPanel = panels.find(p => p.id === existingResultPanelId);
+      if (existingPanel) {
+        updatePanel(existingResultPanelId, {
+          data: {
+            ...existingPanel.data,
+            ...baseResultData
+          }
+        });
+        updatePanel(graphPanelId, {
+          data: {
+            ...graphPanel.data,
+            ...baseResultData,
+            resultPanelId: existingResultPanelId
+          },
+          isExpanded: true
+        });
+        bringPanelToFront(existingResultPanelId);
+        dispatch({ type: 'SET_SELECTED_PANEL', payload: existingResultPanelId });
+        return existingResultPanelId;
+      }
+    }
+
+    const newPanelId = `graph-result-${timestamp}`;
+    const newPanelData = {
+      id: newPanelId,
+      ...baseResultData
+    };
+    const newPanel: Panel = {
+      id: newPanelId,
+      type: 'graph-result',
+      x: graphPanel.x + graphPanel.width + PANEL_SPACING,
+      y: graphPanel.y,
+      width: PANEL_SIZES.GRAPH_RESULT.expanded.width,
+      height: PANEL_SIZES.GRAPH_RESULT.expanded.height,
+      data: newPanelData,
+      parentId: graphPanelId,
+      isExpanded: true
+    };
+
+    dispatch({ type: 'ADD_PANEL', payload: newPanel });
+    bringPanelToFront(newPanelId);
+
+    const newConnection: Connection = {
+      id: `conn-${timestamp}`,
+      fromPanelId: graphPanelId,
+      toPanelId: newPanelId,
+      type: 'derived-from'
+    };
+    dispatch({
+      type: 'SET_CONNECTIONS',
+      payload: [...connections, newConnection]
+    });
+
+    updatePanel(graphPanelId, {
+      data: {
+        ...graphPanel.data,
+        ...newPanelData,
+        resultPanelId: newPanelId
+      },
+      isExpanded: true
+    });
+
+    dispatch({ type: 'SET_SELECTED_PANEL', payload: newPanelId });
+
+    return newPanelId;
+  }, [panels, connections, bringPanelToFront, updatePanel, dispatch]);
+
+  const handleGraphGenerated = useCallback((payload: GraphGenerationResult) => {
+    addGraphResultPanel(payload.panelId, payload);
+  }, [addGraphResultPanel]);
+
+  const focusResultPanel = useCallback((panelId: string) => {
+    bringPanelToFront(panelId);
+    dispatch({ type: 'SET_SELECTED_PANEL', payload: panelId });
+    dispatch({ type: 'SET_HIGHLIGHTED_PANEL', payload: panelId });
+  }, [bringPanelToFront, dispatch]);
 
   // Add a model panel connected to a dataset
   const addModelPanel = useCallback((datasetPanelId: string, modelData: any) => {
@@ -1998,6 +2144,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                       updatePanel(panelId, updates);
                     }
                   }}
+                  onGraphGenerated={handleGraphGenerated}
+                  onFocusResultPanel={focusResultPanel}
+                />
+              )}
+              {panel.type === 'graph-result' && (
+                <GraphResultPanel
+                  panel={panel}
+                  isDragging={draggedPanel === panel.id}
                 />
               )}
               {panel.type === 'model' && (
@@ -2339,6 +2493,48 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
             const spawnY = (anchor?.y ?? 0) - datasetSize.height / 2;
 
             addDatasetPanel(spawnX, spawnY, normalizedData);
+
+            // Ensure the new panel state is persisted even if the user switches tabs quickly
+            setTimeout(() => {
+              try {
+                latestSaveWorkspaceRef.current?.();
+              } catch (saveErr) {
+                console.warn('[Upload] failed to persist workspace after dataset upload', saveErr);
+              }
+            }, 0);
+
+            try {
+              const tabsApi = useTabsStore.getState();
+              const currentActiveTabId = tabsApi.activeTabId;
+              const datasetIdStr = String(datasetId);
+              const existingDataTab = tabsApi.tabs.find((tab) => {
+                if (tab.type !== 'data') return false;
+                const tabDatasetId = tab.meta?.datasetId;
+                return tabDatasetId !== undefined && String(tabDatasetId) === datasetIdStr;
+              });
+
+              let targetTabId = existingDataTab?.id;
+              if (!targetTabId) {
+                const tabTitle = `${normalizedData.name || normalizedData.original_filename || `Dataset ${datasetIdStr}`}`;
+                targetTabId = tabsApi.createTab('data', `Data · ${tabTitle}`, { datasetId: datasetIdStr });
+              }
+
+              if (targetTabId && currentActiveTabId && currentActiveTabId !== targetTabId) {
+                try {
+                  tabsApi.switchToTab(currentActiveTabId);
+                } catch (switchBackErr) {
+                  console.warn('[Upload] failed to return to canvas tab after creating data tab', switchBackErr);
+                }
+                try {
+                  tabsApi.updateUrl(currentActiveTabId);
+                } catch (urlErr) {
+                  console.warn('[Upload] failed to sync url after returning to canvas tab', urlErr);
+                }
+              }
+            } catch (tabError) {
+              console.error('[Upload] unable to open data tab for dataset', tabError);
+            }
+
           } catch (err) {
             console.error('[InfiniteCanvas] failed to add dataset panel after upload', err);
           }

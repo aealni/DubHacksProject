@@ -24,7 +24,7 @@ export interface PanelData {
 
 export interface Panel {
   id: string;
-  type: 'dataset' | 'graph' | 'model' | 'model-results' | 'model-visualization' | 'manipulation' | 'data-editor' | 'merge';
+  type: 'dataset' | 'graph' | 'graph-result' | 'model' | 'model-results' | 'model-visualization' | 'manipulation' | 'data-editor' | 'merge';
   x: number;
   y: number;
   width: number;
@@ -109,7 +109,7 @@ export interface CanvasState {
 // Action types for reducer
 export type CanvasAction =
   | { type: 'SET_VIEWPORT'; payload: Partial<CanvasViewport> }
-  | { type: 'ADD_PANEL'; payload: Omit<Panel, 'id'> }
+  | { type: 'ADD_PANEL'; payload: Omit<Panel, 'id'> & { id?: string } }
   | { type: 'UPDATE_PANEL'; payload: { id: string; updates: Partial<Panel> } }
   | { type: 'UPDATE_PANEL_WITH_SIZE'; payload: { id: string; updates: Partial<Panel> } }
   | { type: 'REMOVE_PANEL'; payload: string }

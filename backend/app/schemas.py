@@ -52,6 +52,9 @@ class CellEdit(BaseModel):
 class CellEditBatch(BaseModel):
     edits: List[CellEdit]
 
+class CellEditResponse(BaseModel):
+    updated: int
+
 class ColumnRename(BaseModel):
     old: str
     new: str
@@ -200,13 +203,22 @@ class GraphConfigRequest(BaseModel):
     line_width: float = 2.0
     marker_size: int = 50
     bins: int = 30
+    line_style: Optional[str] = None
+    line_color: Optional[str] = None
+
+
+class CustomPlotSpec(BaseModel):
+    """Specification for executing an arbitrary Matplotlib/Seaborn/Pandas plot."""
+
+    function: str
+    module: Literal['axes', 'pyplot', 'figure', 'seaborn', 'pandas'] = 'axes'
+    args: Optional[List[Any]] = None
+    kwargs: Optional[Dict[str, Any]] = None
+    apply_formatting: bool = True
 
 
 class CreateGraphRequest(BaseModel):
-    chart_type: Literal[
-        "bar", "line", "scatter", "histogram", "box", "violin", 
-        "pie", "heatmap", "correlation", "pairplot", "area"
-    ]
+    chart_type: str
     x_column: Optional[str] = None
     y_column: Optional[str] = None
     y_columns: Optional[List[str]] = None
@@ -218,6 +230,7 @@ class CreateGraphRequest(BaseModel):
     aggregation: Optional[Literal['count','sum','mean','median','min','max']] = None
     return_data: Optional[bool] = False
     config: Optional[GraphConfigRequest] = None
+    custom_plot: Optional[CustomPlotSpec] = None
 
 
 class GraphResponse(BaseModel):

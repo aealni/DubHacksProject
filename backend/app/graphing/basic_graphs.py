@@ -21,11 +21,8 @@ from ..pipeline import load_preview_from_sqlite, list_table_columns
 from ..db import engine
 
 
-# Chart type definitions
-ChartType = Literal[
-    "bar", "line", "scatter", "histogram", "box", "violin", 
-    "pie", "heatmap", "correlation", "pairplot", "area"
-]
+# Chart type definitions (kept for documentation; runtime accepts any string)
+ChartType = str
 
 # Color palette options
 ColorPalette = Literal[
@@ -60,6 +57,8 @@ class GraphConfiguration:
         line_width: float = 2.0,
         marker_size: int = 50,
         bins: int = 30,  # for histograms
+        line_style: Optional[str] = None,
+        line_color: Optional[str] = None,
         **kwargs
     ):
         self.title = title
@@ -82,6 +81,8 @@ class GraphConfiguration:
         self.line_width = line_width
         self.marker_size = marker_size
         self.bins = bins
+        self.line_style = line_style
+        self.line_color = line_color
         self.kwargs = kwargs
 
 
@@ -154,6 +155,8 @@ class GraphGenerator:
         """Get color list based on configuration."""
         if config.custom_colors:
             return config.custom_colors[:n_colors]
+        if config.line_color:
+            return [config.line_color for _ in range(n_colors)]
         
         if n_colors == 1:
             return [plt.cm.get_cmap(config.color_palette)(0.5)]
@@ -172,6 +175,123 @@ class GraphGenerator:
         image_base64 = base64.b64encode(buffer.getvalue()).decode()
         plt.close()
         return image_base64
+
+    def _resolve_custom_value(self, value: Any, data: pd.DataFrame) -> Any:
+        """Resolve special placeholder values used in custom plot specifications."""
+        if isinstance(value, str):
+            if value.startswith('$column:'):
+                column_name = value.split(':', 1)[1]
+                if column_name not in data.columns:
+                    raise ValueError(f"Column '{column_name}' not found in dataset")
+                return data[column_name]
+            if value.startswith('$column_values:'):
+                column_name = value.split(':', 1)[1]
+                if column_name not in data.columns:
+                    raise ValueError(f"Column '{column_name}' not found in dataset")
+                return data[column_name].dropna().values
+            if value == '$dataframe':
+                return data
+            if value.startswith('$list:'):
+                literal = value.split(':', 1)[1]
+                return [item.strip() for item in literal.split(',') if item.strip()]
+
+        if isinstance(value, dict):
+            # Allow shorthand {"$column": "col"}
+            if '$column' in value:
+                column_name = value['$column']
+                if column_name not in data.columns:
+                    raise ValueError(f"Column '{column_name}' not found in dataset")
+                return data[column_name]
+            if '$column_values' in value:
+                column_name = value['$column_values']
+                if column_name not in data.columns:
+                    raise ValueError(f"Column '{column_name}' not found in dataset")
+                return data[column_name].dropna().values
+            if '$dataframe' in value and value['$dataframe']:
+                return data
+            # Recursively resolve nested dictionaries
+            return {k: self._resolve_custom_value(v, data) for k, v in value.items()}
+
+        if isinstance(value, list):
+            return [self._resolve_custom_value(v, data) for v in value]
+
+        return value
+
+    def create_custom_plot(
+        self,
+        spec: Dict[str, Any],
+        config: Optional[GraphConfiguration] = None
+    ) -> str:
+        """Execute a custom Matplotlib/Seaborn/Pandas plotting call."""
+        if spec is None:
+            raise ValueError("Custom plot specification is required for custom chart types")
+
+        if config is None:
+            config = GraphConfiguration()
+
+        data = self._get_data()
+        self._setup_plot_style(config)
+
+        function_name = spec.get('function')
+        module = spec.get('module', 'axes')
+        apply_formatting = spec.get('apply_formatting', True)
+
+        if not function_name:
+            raise ValueError("Custom plot specification must include a function name")
+
+        args_spec = spec.get('args') or []
+        kwargs_spec = spec.get('kwargs') or {}
+
+        resolved_args = [self._resolve_custom_value(arg, data) for arg in args_spec]
+        resolved_kwargs = {k: self._resolve_custom_value(v, data) for k, v in kwargs_spec.items()}
+
+        fig, ax = plt.subplots(figsize=config.figsize)
+
+        target_callable = None
+        final_ax = ax
+
+        try:
+            if module == 'axes':
+                target_callable = getattr(ax, function_name, None)
+            elif module == 'pyplot':
+                target_callable = getattr(plt, function_name, None)
+                resolved_kwargs.setdefault('ax', ax)
+            elif module == 'figure':
+                target_callable = getattr(fig, function_name, None)
+                final_ax = fig.gca()
+            elif module == 'seaborn':
+                target_callable = getattr(sns, function_name, None)
+                resolved_kwargs.setdefault('ax', ax)
+                resolved_kwargs.setdefault('data', data)
+            elif module == 'pandas':
+                plot_accessor = getattr(data, 'plot')
+                # pandas.DataFrame.plot uses 'kind' keyword; allow overriding but default to function name
+                resolved_kwargs.setdefault('ax', ax)
+                resolved_kwargs.setdefault('kind', function_name)
+                target_callable = plot_accessor
+            else:
+                raise ValueError(f"Unsupported module '{module}' in custom plot specification")
+        except AttributeError:
+            target_callable = None
+
+        if not callable(target_callable):
+            raise ValueError(f"Function '{function_name}' not found for module '{module}'")
+
+        result = target_callable(*resolved_args, **resolved_kwargs)
+
+        if hasattr(result, 'figure'):
+            final_ax = result
+        elif isinstance(result, tuple):
+            # Attempt to find axis-like object within tuple result
+            for item in result:
+                if hasattr(item, 'figure'):
+                    final_ax = item
+                    break
+
+        if apply_formatting and hasattr(final_ax, 'set_xlabel'):
+            self._apply_common_formatting(final_ax, config)
+
+        return self._save_plot_to_base64(config)
 
     def create_bar_chart(
         self, 
@@ -248,11 +368,23 @@ class GraphGenerator:
         
         fig, ax = plt.subplots(figsize=config.figsize)
         
+        line_style = config.line_style or '-'
+        extra_kwargs = config.kwargs or {}
+        
         if group_by is None:
             # Simple line plot
             data_sorted = data.sort_values(x_column)
-            ax.plot(data_sorted[x_column], data_sorted[y_column], 
-                   linewidth=config.line_width, alpha=config.alpha)
+            colors = self._get_colors(config, 1)
+            color = colors[0] if colors else None
+            ax.plot(
+                data_sorted[x_column],
+                data_sorted[y_column],
+                linewidth=config.line_width,
+                alpha=config.alpha,
+                linestyle=line_style,
+                color=color,
+                **extra_kwargs
+            )
         else:
             # Grouped line plot
             groups = data[group_by].unique()
@@ -260,9 +392,16 @@ class GraphGenerator:
             
             for i, group in enumerate(groups):
                 group_data = data[data[group_by] == group].sort_values(x_column)
-                ax.plot(group_data[x_column], group_data[y_column], 
-                       label=str(group), linewidth=config.line_width, 
-                       color=colors[i % len(colors)], alpha=config.alpha)
+                ax.plot(
+                    group_data[x_column],
+                    group_data[y_column],
+                    label=str(group),
+                    linewidth=config.line_width,
+                    color=colors[i % len(colors)],
+                    alpha=config.alpha,
+                    linestyle=line_style,
+                    **extra_kwargs
+                )
         
         self._apply_common_formatting(ax, config)
         return self._save_plot_to_base64(config)
@@ -305,8 +444,18 @@ class GraphGenerator:
             s = ((size_values - size_values.min()) / 
                  (size_values.max() - size_values.min()) * 100 + 20)
         
-        scatter = ax.scatter(data[x_column], data[y_column], 
-                           c=c, s=s, alpha=config.alpha)
+        colors = None
+        if color_by is None:
+            colors_list = self._get_colors(config, 1)
+            colors = colors_list[0] if colors_list else None
+
+        scatter = ax.scatter(
+            data[x_column],
+            data[y_column],
+            c=c if color_by else colors,
+            s=s,
+            alpha=config.alpha
+        )
         
         # Add colorbar if using continuous color mapping
         if color_by and data[color_by].dtype not in ['object', 'category']:

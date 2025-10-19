@@ -81,6 +81,10 @@ async def get_dataset_columns(
     except Exception as e:
         logger.error(f"Error getting columns for dataset {dataset_id}: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving dataset columns")
+SUPPORTED_CHART_TYPES = {
+    "bar", "line", "scatter", "histogram", "box", "violin",
+    "pie", "heatmap", "correlation", "pairplot", "area"
+}
 
 
 @router.post("/datasets/{dataset_id}/graphs", response_model=schemas.GraphResponse)
@@ -111,10 +115,16 @@ async def create_graph(
         # Remove None values
         parameters = {k: v for k, v in parameters.items() if v is not None}
         
-        # Validate parameters
-        validated_params = validate_chart_parameters(
-            request.chart_type, parameters, available_columns
-        )
+        chart_type = request.chart_type
+        chart_type_key = chart_type.lower()
+
+        # Validate parameters for supported chart types
+        if chart_type_key in SUPPORTED_CHART_TYPES:
+            validated_params = validate_chart_parameters(
+                chart_type_key, parameters, available_columns
+            )
+        else:
+            validated_params = parameters
         
         # Convert config
         config = None
@@ -126,7 +136,7 @@ async def create_graph(
         
         # Generate the appropriate chart
         data_payload = None
-        if request.chart_type == "bar":
+        if chart_type_key == "bar":
             image_base64 = generator.create_bar_chart(
                 validated_params["x_column"],
                 validated_params.get("y_column"),
@@ -161,7 +171,7 @@ async def create_graph(
                         "values": grouped.values.tolist(),
                         "metric": metric
                     }
-        elif request.chart_type == "line":
+        elif chart_type_key == "line":
             image_base64 = generator.create_line_chart(
                 validated_params["x_column"],
                 validated_params["y_column"],
@@ -185,7 +195,7 @@ async def create_graph(
                         "x": df[validated_params["x_column"]].tolist(),
                         "y": df[validated_params["y_column"]].tolist()
                     }
-        elif request.chart_type == "scatter":
+        elif chart_type_key == "scatter":
             image_base64 = generator.create_scatter_plot(
                 validated_params["x_column"],
                 validated_params["y_column"],
@@ -206,7 +216,7 @@ async def create_graph(
                 if sb and sb in df.columns:
                     payload["size_by"] = df[sb].tolist()
                 data_payload = payload
-        elif request.chart_type == "histogram":
+        elif chart_type_key == "histogram":
             image_base64 = generator.create_histogram(
                 validated_params["column"],
                 config
@@ -222,47 +232,57 @@ async def create_graph(
                     "counts": hist.tolist(),
                     "column": col
                 }
-        elif request.chart_type == "box":
+        elif chart_type_key == "box":
             image_base64 = generator.create_box_plot(
                 validated_params["y_column"],
                 validated_params.get("x_column"),
                 config
             )
-        elif request.chart_type == "violin":
+        elif chart_type_key == "violin":
             image_base64 = generator.create_violin_plot(
                 validated_params["y_column"],
                 validated_params.get("x_column"),
                 config
             )
-        elif request.chart_type == "pie":
+        elif chart_type_key == "pie":
             image_base64 = generator.create_pie_chart(
                 validated_params["column"],
                 config
             )
-        elif request.chart_type == "heatmap":
+        elif chart_type_key == "heatmap":
             image_base64 = generator.create_heatmap(
                 validated_params.get("columns"),
                 config
             )
-        elif request.chart_type == "correlation":
+        elif chart_type_key == "correlation":
             image_base64 = generator.create_correlation_matrix(config)
-        elif request.chart_type == "pairplot":
+        elif chart_type_key == "pairplot":
             image_base64 = generator.create_pairplot(
                 validated_params.get("columns"),
                 validated_params.get("color_by"),
                 config
             )
-        elif request.chart_type == "area":
+        elif chart_type_key == "area":
             image_base64 = generator.create_area_chart(
                 validated_params["x_column"],
                 validated_params["y_columns"],
                 config
             )
         else:
-            raise HTTPException(status_code=400, detail=f"Unsupported chart type: {request.chart_type}")
+            if request.custom_plot is None:
+                raise HTTPException(status_code=400, detail=f"Unsupported chart type: {request.chart_type}")
+            custom_spec = request.custom_plot.dict(exclude_none=True)
+            image_base64 = generator.create_custom_plot(
+                custom_spec,
+                config
+            )
+            validated_params = {
+                **validated_params,
+                "custom_plot": custom_spec
+            }
         
         return schemas.GraphResponse(
-            chart_type=request.chart_type,
+            chart_type=chart_type,
             image_base64=image_base64,
             parameters_used=validated_params,
             data=data_payload

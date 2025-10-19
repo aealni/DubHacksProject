@@ -51,6 +51,8 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
   const [mergeInfo, setMergeInfo] = useState<MergeInfo | null>(null);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [delimiterOption, setDelimiterOption] = useState<'auto' | 'comma' | 'tab' | 'semicolon' | 'space' | 'pipe' | 'custom'>('auto');
+  const [customDelimiter, setCustomDelimiter] = useState('');
 
   // Load merge info on component mount
   useEffect(() => {
@@ -73,21 +75,58 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
     setDragging(false);
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
-      setFile(droppedFile);
-      setError(null);
+      const ext = droppedFile.name.split('.').pop()?.toLowerCase();
+      const allowed = ['csv', 'tsv', 'txt', 'xlsx', 'xls'];
+      if (ext && allowed.includes(ext)) {
+        setFile(droppedFile);
+        setError(null);
+      } else {
+        setError('Please select a CSV, TSV, TXT, or Excel file');
+      }
     }
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      setFile(selectedFile);
-      setError(null);
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase();
+      const allowed = ['csv', 'tsv', 'txt', 'xlsx', 'xls'];
+      if (ext && allowed.includes(ext)) {
+        setFile(selectedFile);
+        setError(null);
+      } else {
+        setError('Please select a CSV, TSV, TXT, or Excel file');
+      }
+    }
+  };
+
+  const resolveDelimiterValue = () => {
+    switch (delimiterOption) {
+      case 'auto':
+        return null;
+      case 'comma':
+        return ',';
+      case 'tab':
+        return '\\t';
+      case 'semicolon':
+        return ';';
+      case 'space':
+        return ' ';
+      case 'pipe':
+        return '|';
+      case 'custom':
+        return customDelimiter.length > 0 ? customDelimiter : null;
+      default:
+        return null;
     }
   };
 
   const previewMerge = async () => {
     if (!file) return;
+    if (delimiterOption === 'custom' && customDelimiter.length === 0) {
+      setError('Please provide a custom delimiter before previewing.');
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -98,6 +137,10 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
       formData.append('merge_strategy', mergeStrategy);
       if (mergeColumn) formData.append('merge_column', mergeColumn);
       formData.append('join_type', joinType);
+      const delimiterValue = resolveDelimiterValue();
+      if (delimiterValue !== null) {
+        formData.append('delimiter', delimiterValue);
+      }
 
       const res = await fetch(`${BACKEND_URL}/dataset/${datasetId}/preview-merge`, {
         method: 'POST',
@@ -121,6 +164,10 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
 
   const performMerge = async () => {
     if (!file) return;
+    if (delimiterOption === 'custom' && customDelimiter.length === 0) {
+      setError('Please provide a custom delimiter before uploading.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -132,6 +179,10 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
       if (mergeColumn) formData.append('merge_column', mergeColumn);
       formData.append('join_type', joinType);
       formData.append('prefix_conflicting_columns', prefixConflicting.toString());
+      const delimiterValue = resolveDelimiterValue();
+      if (delimiterValue !== null) {
+        formData.append('delimiter', delimiterValue);
+      }
 
       const res = await fetch(`${BACKEND_URL}/dataset/${datasetId}/add-data`, {
         method: 'POST',
@@ -391,14 +442,46 @@ export const MergeUpload: React.FC<MergeUploadProps> = ({ datasetId, onSuccess, 
               </div>
             ) : (
               <div>
-                <p className="mb-2">Drag & drop a CSV or Excel file here</p>
+                <p className="mb-2">Drag & drop a CSV, TSV, TXT, or Excel file here</p>
                 <p className="text-sm text-gray-500 mb-2">or</p>
                 <input
                   type="file"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.tsv,.txt,.xlsx,.xls"
                   onChange={handleFileSelect}
                   className="block w-full text-sm text-gray-500"
                 />
+              </div>
+            )}
+          </div>
+          <div className="mt-4 space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Delimiter
+            </label>
+            <select
+              value={delimiterOption}
+              onChange={(e) => setDelimiterOption(e.target.value as any)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            >
+              <option value="auto">Auto detect</option>
+              <option value="comma">Comma (,)</option>
+              <option value="tab">Tab (\\t)</option>
+              <option value="semicolon">Semicolon (;)</option>
+              <option value="space">Space</option>
+              <option value="pipe">Pipe (|)</option>
+              <option value="custom">Custom...</option>
+            </select>
+            {delimiterOption === 'custom' && (
+              <div className="space-y-1">
+                <input
+                  type="text"
+                  value={customDelimiter}
+                  onChange={(e) => setCustomDelimiter(e.target.value)}
+                  placeholder="Enter delimiter characters"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-gray-500">
+                  Leave blank to disable upload. Multi-character delimiters supported.
+                </p>
               </div>
             )}
           </div>

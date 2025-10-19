@@ -36,9 +36,10 @@ export function canvasReducer(state: CanvasState, action: CanvasAction): CanvasS
       return { ...state, viewport: { ...state.viewport, ...action.payload } };
 
     case 'ADD_PANEL':
+      const { id: requestedId, ...panelProps } = action.payload;
       const newPanel: Panel = {
-        ...action.payload,
-        id: `panel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        ...(panelProps as Omit<Panel, 'id'>),
+        id: requestedId || `panel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         zIndex: state.panels.length + 1,
         lastInteraction: Date.now()
       };

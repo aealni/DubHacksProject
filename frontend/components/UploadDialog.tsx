@@ -36,25 +36,37 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
     drop_row_missing_pct: 0.6,
     lowercase_categoricals: true
   });
+  const [delimiterOption, setDelimiterOption] = useState<'auto' | 'comma' | 'tab' | 'semicolon' | 'space' | 'pipe' | 'custom'>('auto');
+  const [customDelimiter, setCustomDelimiter] = useState('');
   const [availableMergeColumns, setAvailableMergeColumns] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      setFile(selectedFile);
-      setError(null);
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase();
+      const allowed = ['csv', 'tsv', 'txt', 'xlsx', 'xls'];
+      if (ext && allowed.includes(ext)) {
+        setFile(selectedFile);
+        setError(null);
+      } else {
+        setError('Please select a CSV, TSV, TXT, or Excel file');
+      }
     }
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const droppedFile = event.dataTransfer.files[0];
-    if (droppedFile && droppedFile.type === 'text/csv') {
-      setFile(droppedFile);
-      setError(null);
-    } else {
-      setError('Please select a CSV file');
+    if (droppedFile) {
+      const ext = droppedFile.name.split('.').pop()?.toLowerCase();
+      const allowed = ['csv', 'tsv', 'txt', 'xlsx', 'xls'];
+      if (ext && allowed.includes(ext)) {
+        setFile(droppedFile);
+        setError(null);
+      } else {
+        setError('Please select a CSV, TSV, TXT, or Excel file');
+      }
     }
   };
 
@@ -62,8 +74,33 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
     event.preventDefault();
   };
 
+  const resolveDelimiterValue = () => {
+    switch (delimiterOption) {
+      case 'auto':
+        return null;
+      case 'comma':
+        return ',';
+      case 'tab':
+        return '\\t';
+      case 'semicolon':
+        return ';';
+      case 'space':
+        return ' ';
+      case 'pipe':
+        return '|';
+      case 'custom':
+        return customDelimiter.length > 0 ? customDelimiter : null;
+      default:
+        return null;
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) return;
+    if (delimiterOption === 'custom' && customDelimiter.length === 0) {
+      setError('Please provide a custom delimiter before uploading.');
+      return;
+    }
 
     console.log('Starting upload...', { file: file.name, backendUrl: BACKEND_URL, options: uploadOptions });
 
@@ -94,6 +131,10 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
     formData.append('missing_mode', uploadOptions.missing_mode);
     formData.append('drop_row_missing_pct', uploadOptions.drop_row_missing_pct.toString());
     formData.append('lowercase_categoricals', uploadOptions.lowercase_categoricals.toString());
+    const delimiterValue = resolveDelimiterValue();
+    if (delimiterValue !== null) {
+      formData.append('delimiter', delimiterValue);
+    }
 
     // Simulate upload progress
     const progressInterval = setInterval(() => {
@@ -130,6 +171,10 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
   const handleMergeUpload = async () => {
     const formData = new FormData();
     formData.append('file', file!);
+    const delimiterValue = resolveDelimiterValue();
+    if (delimiterValue !== null) {
+      formData.append('delimiter', delimiterValue);
+    }
     
     // Simulate upload progress
     const progressInterval = setInterval(() => {
@@ -149,6 +194,9 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
 
     if (uploadOptions.merge_strategy === 'merge_on_column' && uploadOptions.merge_column) {
       requestBody.merge_column = uploadOptions.merge_column;
+    }
+    if (delimiterValue !== null) {
+      requestBody.delimiter = delimiterValue;
     }
 
     formData.append('config', JSON.stringify(requestBody));
@@ -227,7 +275,7 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
               <div className="space-y-2">
                 <div className="text-gray-400 text-2xl">File</div>
                 <p className="text-sm text-gray-600">
-                  Drag and drop a CSV file here, or{' '}
+                  Drag and drop a CSV, TSV, TXT, or Excel file here, or{' '}
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="text-blue-600 hover:text-blue-700 font-medium"
@@ -235,7 +283,7 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
                     browse
                   </button>
                 </p>
-                <p className="text-xs text-gray-500">Only CSV files are supported</p>
+                <p className="text-xs text-gray-500">CSV, TSV, TXT, and Excel files are supported</p>
               </div>
             )}
           </div>
@@ -244,7 +292,7 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".csv,.tsv,.txt,.xlsx,.xls"
             onChange={handleFileSelect}
             className="hidden"
           />
@@ -284,6 +332,40 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({
 
             {showAdvanced && (
               <div className="space-y-3 border-l-2 border-blue-200 pl-4">
+                {/* Delimiter Selection */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Delimiter
+                  </label>
+                  <select
+                    value={delimiterOption}
+                    onChange={(e) => setDelimiterOption(e.target.value as any)}
+                    className="w-full p-2 border border-gray-300 rounded text-xs"
+                  >
+                    <option value="auto">Auto detect</option>
+                    <option value="comma">Comma (,)</option>
+                    <option value="tab">Tab (\\t)</option>
+                    <option value="semicolon">Semicolon (;)</option>
+                    <option value="space">Space</option>
+                    <option value="pipe">Pipe (|)</option>
+                    <option value="custom">Custom...</option>
+                  </select>
+                  {delimiterOption === 'custom' && (
+                    <div className="mt-2 space-y-1">
+                      <input
+                        type="text"
+                        value={customDelimiter}
+                        onChange={(e) => setCustomDelimiter(e.target.value)}
+                        placeholder="Enter delimiter characters"
+                        className="w-full p-2 border border-gray-300 rounded text-xs"
+                      />
+                      <p className="text-[11px] text-gray-500">
+                        Leave blank to disable upload. Supports multi-character delimiters.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Missing Values Handling */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">

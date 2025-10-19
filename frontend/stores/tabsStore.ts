@@ -124,15 +124,7 @@ export const useTabsStore = create<TabsStore>()(
   const newTab = createDefaultTab(type, title, state.nextTabOrder, meta);
       
       // DEBUG: log tab creation with stack trace
-      try {
-        throw new Error('createTab called');
-      } catch (e: any) {
-        console.log('[tabsStore] createTab called', { type, title, meta });
-        // Print an explicit trace for easier inspection in browser consoles
-        console.trace('[tabsStore] createTab trace');
-        // Also print raw stack string
-        console.log(e.stack);
-      }
+      console.log('[tabsStore] createTab called', { type, title, meta });
 
       set({
         tabs: [...state.tabs, newTab],

@@ -18,6 +18,10 @@ export const PANEL_SIZES = {
     collapsed: { width: 300, height: 72 },
     expanded: { width: 540, height: 400 }
   },
+  GRAPH_RESULT: {
+    collapsed: { width: 320, height: 120 },
+    expanded: { width: 560, height: 440 }
+  },
   MODEL: { 
     collapsed: { width: 300, height: 72 },
     expanded: { width: 540, height: 420 }

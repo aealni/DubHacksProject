@@ -10,7 +10,7 @@ def cleaned_table_name(dataset_id: int) -> str:
     return f"cleaned_{dataset_id}"  # simple helper
 
 
-def detect_header_and_read(path_or_bytes: Union[bytes, str]) -> pd.DataFrame:
+def detect_header_and_read(path_or_bytes: Union[bytes, str], delimiter: Optional[str] = None) -> pd.DataFrame:
     """Simplified reader: always treat first row as header.
 
     Previous heuristic sometimes mis-identified a data row as the header when
@@ -26,10 +26,12 @@ def detect_header_and_read(path_or_bytes: Union[bytes, str]) -> pd.DataFrame:
         # XLSX files start with PK (zip)
         if peek.startswith(b'PK'):
             return pd.read_excel(bio)
-        return pd.read_csv(bio, header=0)
+        sep = None if delimiter in (None, '') else delimiter
+        return pd.read_csv(bio, header=0, sep=sep)
     lower = str(path_or_bytes).lower()
-    if lower.endswith('.csv'):
-        return pd.read_csv(path_or_bytes, header=0)
+    if lower.endswith('.csv') or lower.endswith('.tsv') or lower.endswith('.txt'):
+        sep = None if delimiter in (None, '') else delimiter
+        return pd.read_csv(path_or_bytes, header=0, sep=sep)
     if lower.endswith('.xlsx') or lower.endswith('.xls'):
         return pd.read_excel(path_or_bytes)
     raise ValueError("Unsupported file type. Only CSV/XLSX supported.")
@@ -280,8 +282,8 @@ def run_cleaning_pipeline(df_raw: pd.DataFrame, cfg: CleaningConfig) -> Tuple[pd
     return df, metadata
 
 # Backwards compatibility wrappers (if older code still imports them)
-def read_file_to_df(filename: str, content: bytes) -> pd.DataFrame:
-    return detect_header_and_read(content)
+def read_file_to_df(filename: str, content: bytes, delimiter: Optional[str] = None) -> pd.DataFrame:
+    return detect_header_and_read(content, delimiter=delimiter)
 
 def clean_dataframe(df: pd.DataFrame, config: Optional[CleaningConfig] = None):  # deprecated
     cfg = config or CleaningConfig()

@@ -22,7 +22,7 @@ logger = logging.getLogger("udc.upload")
 router = APIRouter()
 
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB per spec
-ALLOWED_EXT = {'.csv', '.xlsx', '.xls'}
+ALLOWED_EXT = {'.csv', '.tsv', '.txt', '.xlsx', '.xls'}
 
 
 def _validate_extension(filename: str):
@@ -30,7 +30,27 @@ def _validate_extension(filename: str):
     for ext in ALLOWED_EXT:
         if lower.endswith(ext):
             return
-    raise HTTPException(status_code=400, detail="Unsupported file type. Use CSV or XLSX")
+    raise HTTPException(status_code=400, detail="Unsupported file type. Use CSV/TSV/TXT or XLSX")
+
+
+def _normalize_delimiter(raw: Optional[str]) -> Optional[str]:
+    if raw is None:
+        return None
+    if raw == '':
+        return None
+    # Handle common aliases
+    if raw in {'\t', '\\t', '	'}:
+        return '\t'
+    lower = raw.lower()
+    if lower in {'tab', '\\t'}:
+        return '\t'
+    if lower == 'space':
+        return ' '
+    if lower == 'comma':
+        return ','
+    if lower == 'semicolon':
+        return ';'
+    return raw
 
 def qi(name: str) -> str:
     """Quote identifier for SQLite."""
@@ -79,6 +99,7 @@ async def upload_dataset(
     drop_row_missing_pct: float = 0.6,
     lowercase_categoricals: bool = True,
     missing_mode: str = 'drop_rows',
+    delimiter: Optional[str] = Form(None),
     config: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
@@ -91,7 +112,8 @@ async def upload_dataset(
     if len(content) > MAX_UPLOAD_SIZE:
         raise HTTPException(status_code=400, detail="File too large")
     try:
-        df_raw = read_file_to_df(file.filename, content)
+        delimiter_value = _normalize_delimiter(delimiter)
+        df_raw = read_file_to_df(file.filename, content, delimiter=delimiter_value)
     except Exception as e:
         logger.exception("File read failed: %s", e)
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
@@ -107,6 +129,10 @@ async def upload_dataset(
             lowercase_categoricals=lowercase_categoricals,
             missing_mode=missing_mode  # validate through model
         )
+
+    options_payload = cfg_obj.model_dump()
+    if delimiter_value is not None:
+        options_payload['delimiter'] = delimiter_value
 
     raw_rows, raw_cols = df_raw.shape
     cleaned_df, meta = run_cleaning_pipeline(df_raw, cfg_obj)
@@ -131,7 +157,7 @@ async def upload_dataset(
                 n_rows_clean=cleaned_rows,
                 n_cols_clean=cleaned_cols,
                 pipeline_json=json.dumps(steps),
-                options_json=json.dumps(cfg_obj.model_dump())
+                options_json=json.dumps(options_payload)
             )
             db.add(dataset)
             db.commit()
@@ -262,6 +288,43 @@ def dataset_preview(dataset_id: int, db: Session = Depends(get_db), limit: int =
         raise HTTPException(status_code=500, detail="Failed to read cleaned table")
     cols = df.columns.tolist()
     return schemas.PreviewResponse(preview=schemas.PreviewBlock(columns=cols, rows=df.to_dict(orient='records'), total_rows=total, offset=offset, limit=limit))
+
+
+@router.post('/dataset/{dataset_id}/cells', response_model=schemas.CellEditResponse)
+def update_dataset_cells(
+    dataset_id: int,
+    edits: schemas.CellEditBatch,
+    db: Session = Depends(get_db)
+):
+    dataset = db.query(models.Dataset).filter(models.Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    if not edits.edits:
+        return schemas.CellEditResponse(updated=0)
+
+    table = cleaned_table_name(dataset_id)
+    available_columns = set(list_table_columns(table, engine) or [])
+    invalid_columns = [edit.column for edit in edits.edits if edit.column not in available_columns]
+    if invalid_columns:
+        raise HTTPException(status_code=400, detail=f"Unknown columns: {', '.join(sorted(set(invalid_columns)))}")
+
+    try:
+        with engine.begin() as conn:
+            for edit in edits.edits:
+                conn.exec_driver_sql(
+                    f'UPDATE {qi(table)} SET {qi(edit.column)} = :value WHERE rowid = :rowid',
+                    {"value": edit.value, "rowid": edit.rowid}
+                )
+    except Exception as exc:
+        logger.error("Failed to update cells for dataset %s: %s", dataset_id, exc)
+        raise HTTPException(status_code=500, detail="Failed to update dataset cells")
+
+    dataset.updated_at = datetime.utcnow()
+    db.add(dataset)
+    db.commit()
+
+    return schemas.CellEditResponse(updated=len(edits.edits))
 
 
 @router.get('/dataset/{dataset_id}/metadata', response_model=schemas.MetadataResponse)
@@ -822,6 +885,7 @@ async def add_data_to_dataset(
     drop_row_missing_pct: float = Form(0.6),
     lowercase_categoricals: bool = Form(True),
     missing_mode: str = Form('drop_rows'),
+    delimiter: Optional[str] = Form(None),
     config: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
@@ -840,7 +904,8 @@ async def add_data_to_dataset(
     
     try:
         # Read and clean new data
-        df_raw = read_file_to_df(file.filename, content)
+        delimiter_value = _normalize_delimiter(delimiter)
+        df_raw = read_file_to_df(file.filename, content, delimiter=delimiter_value)
         
         if config:
             cfg_obj = CleaningConfig(**json.loads(config))
@@ -851,6 +916,10 @@ async def add_data_to_dataset(
                 missing_mode=missing_mode
             )
         
+        options_payload = cfg_obj.model_dump()
+        if delimiter_value is not None:
+            options_payload['delimiter'] = delimiter_value
+
         cleaned_df, meta = run_cleaning_pipeline(df_raw, cfg_obj)
         
         # Perform merge operation
@@ -864,7 +933,7 @@ async def add_data_to_dataset(
                 n_rows_clean=len(cleaned_df),
                 n_cols_clean=len(cleaned_df.columns),
                 pipeline_json=json.dumps(["standardize_column_names", "infer_and_cast_dtypes", "normalize_categoricals", "remove_duplicates", "handle_missing_values"]),
-                options_json=json.dumps(cfg_obj.model_dump())
+                options_json=json.dumps(options_payload)
             )
             db.add(new_dataset)
             db.commit()
@@ -1039,6 +1108,7 @@ async def preview_merge_operation(
     merge_strategy: str = Form(...),
     merge_column: Optional[str] = Form(None),
     join_type: str = Form('outer'),
+    delimiter: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """Preview what a merge operation would look like without actually performing it."""
@@ -1054,7 +1124,8 @@ async def preview_merge_operation(
     
     try:
         # Read new data
-        df_raw = read_file_to_df(file.filename, content)
+        delimiter_value = _normalize_delimiter(delimiter)
+        df_raw = read_file_to_df(file.filename, content, delimiter=delimiter_value)
         cleaned_df, _ = run_cleaning_pipeline(df_raw, CleaningConfig())
         
         # Get column analysis
@@ -1179,7 +1250,7 @@ def get_related_datasets(dataset_id: int, db: Session = Depends(get_db)):
 
 
 @router.post('/preview-file')
-async def preview_file(file: UploadFile = File(...)):
+async def preview_file(file: UploadFile = File(...), delimiter: Optional[str] = Form(None)):
     """Preview a file before uploading - shows cleaned data and processing summary."""
     try:
         _validate_extension(file.filename)
@@ -1189,7 +1260,8 @@ async def preview_file(file: UploadFile = File(...)):
         
         # Read and process the file
         content = await file.read()
-        df_raw = read_file_to_df(content, file.filename)
+        delimiter_value = _normalize_delimiter(delimiter)
+        df_raw = read_file_to_df(file.filename, content, delimiter=delimiter_value)
         
         # Apply cleaning pipeline
         cfg_obj = CleaningConfig()  # Use default settings
