@@ -29,7 +29,13 @@ export default function IndexPage() {
 							href="/workspace"
 							className="inline-flex items-center justify-center rounded-full bg-amber-400 px-6 py-3 font-medium text-slate-950 transition hover:bg-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
 						>
-							Enter workspace
+							Enter workspace sandbox
+						</Link>
+						<Link
+							href="/workspace?mode=education"
+							className="inline-flex items-center justify-center rounded-full border border-amber-400 px-6 py-3 font-medium text-amber-300 transition hover:bg-amber-400 hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
+						>
+							Explore guided education mode
 						</Link>
 					</div>
 				</div>

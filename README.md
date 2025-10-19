@@ -19,4 +19,4 @@ DubHacksProject
 
 
 # Tracks
-Grow -> Okanagan, Statsig, Gemini
+Grow -> Okanagan, Gemini
