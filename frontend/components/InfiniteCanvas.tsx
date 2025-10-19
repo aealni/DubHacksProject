@@ -129,6 +129,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
   const [datasets, setDatasets] = useState<any[]>([]);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
   const [query, setQuery] = useState('');
+  const educationSampleLoadRef = useRef(false);
 
   console.log(`InfiniteCanvas mounting with storageKey: ${storageKey}`);
 
@@ -377,6 +378,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
   useEffect(() => {
     if (showChooser) fetchDatasets();
   }, [showChooser]);
+
 
   // Auto-save workspace periodically
   useEffect(() => {
@@ -1319,6 +1321,154 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     dispatch({ type: 'ADD_PANEL', payload: newPanel });
     bringPanelToFront(newPanel.id); // Bring new panel to front
   }, [bringPanelToFront]);
+
+  const handleDatasetUploadSuccess = useCallback((dataset: any, options?: { anchor?: { x: number; y: number } }) => {
+    try {
+      const datasetId = dataset?.dataset_id ?? dataset?.id ?? Date.now();
+      const normalizedData = {
+        ...dataset,
+        id: datasetId,
+        dataset_id: datasetId,
+        name: dataset?.name || dataset?.original_filename || `Dataset ${datasetId}`
+      };
+
+      const hasValidAnchor = options?.anchor
+        ? true
+        : typeof uploadPosition?.x === 'number' &&
+          typeof uploadPosition?.y === 'number' &&
+          !(uploadPosition.x === 0 && uploadPosition.y === 0 && panels.length > 0);
+
+      const anchor = options?.anchor ?? (hasValidAnchor ? uploadPosition : getCanvasCenter());
+      const datasetSize = PANEL_SIZES.DATASET.collapsed;
+      const spawnX = (anchor?.x ?? 0) - datasetSize.width / 2;
+      const spawnY = (anchor?.y ?? 0) - datasetSize.height / 2;
+
+      addDatasetPanel(spawnX, spawnY, normalizedData);
+
+      setTimeout(() => {
+        try {
+          latestSaveWorkspaceRef.current?.();
+        } catch (saveErr) {
+          console.warn('[Upload] failed to persist workspace after dataset upload', saveErr);
+        }
+      }, 0);
+
+      try {
+        const tabsApi = useTabsStore.getState();
+        const currentActiveTabId = tabsApi.activeTabId;
+        const datasetIdStr = String(datasetId);
+        const existingDataTab = tabsApi.tabs.find((tab) => {
+          if (tab.type !== 'data') return false;
+          const tabDatasetId = tab.meta?.datasetId;
+          return tabDatasetId !== undefined && String(tabDatasetId) === datasetIdStr;
+        });
+
+        let targetTabId = existingDataTab?.id;
+        if (!targetTabId) {
+          const tabTitle = `${normalizedData.name || normalizedData.original_filename || `Dataset ${datasetIdStr}`}`;
+          targetTabId = tabsApi.createTab('data', `Data · ${tabTitle}`, { datasetId: datasetIdStr });
+        }
+
+        if (targetTabId && currentActiveTabId && currentActiveTabId !== targetTabId) {
+          try {
+            tabsApi.switchToTab(currentActiveTabId);
+          } catch (switchBackErr) {
+            console.warn('[Upload] failed to return to canvas tab after creating data tab', switchBackErr);
+          }
+          try {
+            tabsApi.updateUrl(currentActiveTabId);
+          } catch (urlErr) {
+            console.warn('[Upload] failed to sync url after returning to canvas tab', urlErr);
+          }
+        }
+      } catch (tabError) {
+        console.error('[Upload] unable to open data tab for dataset', tabError);
+      }
+
+    } catch (err) {
+      console.error('[InfiniteCanvas] failed to add dataset panel after upload', err);
+    }
+  }, [uploadPosition, panels.length, getCanvasCenter, addDatasetPanel]);
+
+  useEffect(() => {
+    const handleEducationLoad = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        path?: string;
+        name?: string;
+        anchor?: { x: number; y: number };
+      }>;
+
+      const detail = customEvent.detail || {};
+      const datasetPath = detail.path;
+
+      if (!datasetPath) {
+        console.warn('[InfiniteCanvas] education-load-sample event missing path detail');
+        return;
+      }
+
+      if (educationSampleLoadRef.current) {
+        console.warn('[InfiniteCanvas] sample dataset load already in progress');
+        return;
+      }
+
+      educationSampleLoadRef.current = true;
+
+      (async () => {
+        try {
+          const response = await fetch(datasetPath);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch sample dataset (${response.status})`);
+          }
+
+          const blob = await response.blob();
+          const inferredName = detail.name || datasetPath.split('/').pop() || 'education-sample.csv';
+          const file = new File([blob], inferredName, { type: blob.type || 'text/csv' });
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('missing_mode', 'drop_rows');
+          formData.append('drop_row_missing_pct', '0.6');
+          formData.append('lowercase_categoricals', 'true');
+
+          const uploadResponse = await fetch(`${BACKEND_URL}/upload`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            let message = `Failed to upload sample dataset (${uploadResponse.status})`;
+            if (errorText) {
+              try {
+                const errorData = JSON.parse(errorText);
+                message = errorData?.detail || errorData?.error || message;
+              } catch {
+                message = errorText;
+              }
+            }
+            throw new Error(message);
+          }
+
+          const result = await uploadResponse.json();
+          const anchor = detail.anchor ?? getCanvasCenter();
+          handleDatasetUploadSuccess(result, { anchor });
+          window.dispatchEvent(new CustomEvent('education-load-sample-success', { detail: { dataset: result } }));
+        } catch (error) {
+          console.error('[InfiniteCanvas] Unable to load education sample dataset', error);
+          window.dispatchEvent(new CustomEvent('education-load-sample-error', {
+            detail: {
+              message: error instanceof Error ? error.message : String(error)
+            }
+          }));
+        } finally {
+          educationSampleLoadRef.current = false;
+        }
+      })();
+    };
+
+    window.addEventListener('education-load-sample', handleEducationLoad);
+    return () => window.removeEventListener('education-load-sample', handleEducationLoad);
+  }, [BACKEND_URL, getCanvasCenter, handleDatasetUploadSuccess]);
 
   // Add a graph panel connected to a dataset
   const addGraphPanel = useCallback((datasetPanelId: string, graphData: any) => {
@@ -2507,71 +2657,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         isOpen={showUploadDialog}
         onClose={() => dispatch({ type: 'SET_UPLOAD_DIALOG', payload: { show: false } })}
         onUploadSuccess={(dataset) => {
-          try {
-            const datasetId = dataset?.dataset_id ?? dataset?.id ?? Date.now();
-            const normalizedData = {
-              ...dataset,
-              id: datasetId,
-              dataset_id: datasetId,
-              name: dataset?.name || dataset?.original_filename || `Dataset ${datasetId}`
-            };
-
-            const hasValidAnchor =
-              typeof uploadPosition?.x === 'number' &&
-              typeof uploadPosition?.y === 'number' &&
-              !(uploadPosition.x === 0 && uploadPosition.y === 0 && panels.length > 0);
-
-            const anchor = hasValidAnchor ? uploadPosition : getCanvasCenter();
-            const datasetSize = PANEL_SIZES.DATASET.collapsed;
-            const spawnX = (anchor?.x ?? 0) - datasetSize.width / 2;
-            const spawnY = (anchor?.y ?? 0) - datasetSize.height / 2;
-
-            addDatasetPanel(spawnX, spawnY, normalizedData);
-
-            // Ensure the new panel state is persisted even if the user switches tabs quickly
-            setTimeout(() => {
-              try {
-                latestSaveWorkspaceRef.current?.();
-              } catch (saveErr) {
-                console.warn('[Upload] failed to persist workspace after dataset upload', saveErr);
-              }
-            }, 0);
-
-            try {
-              const tabsApi = useTabsStore.getState();
-              const currentActiveTabId = tabsApi.activeTabId;
-              const datasetIdStr = String(datasetId);
-              const existingDataTab = tabsApi.tabs.find((tab) => {
-                if (tab.type !== 'data') return false;
-                const tabDatasetId = tab.meta?.datasetId;
-                return tabDatasetId !== undefined && String(tabDatasetId) === datasetIdStr;
-              });
-
-              let targetTabId = existingDataTab?.id;
-              if (!targetTabId) {
-                const tabTitle = `${normalizedData.name || normalizedData.original_filename || `Dataset ${datasetIdStr}`}`;
-                targetTabId = tabsApi.createTab('data', `Data · ${tabTitle}`, { datasetId: datasetIdStr });
-              }
-
-              if (targetTabId && currentActiveTabId && currentActiveTabId !== targetTabId) {
-                try {
-                  tabsApi.switchToTab(currentActiveTabId);
-                } catch (switchBackErr) {
-                  console.warn('[Upload] failed to return to canvas tab after creating data tab', switchBackErr);
-                }
-                try {
-                  tabsApi.updateUrl(currentActiveTabId);
-                } catch (urlErr) {
-                  console.warn('[Upload] failed to sync url after returning to canvas tab', urlErr);
-                }
-              }
-            } catch (tabError) {
-              console.error('[Upload] unable to open data tab for dataset', tabError);
-            }
-
-          } catch (err) {
-            console.error('[InfiniteCanvas] failed to add dataset panel after upload', err);
-          }
+          handleDatasetUploadSuccess(dataset);
         }}
         position={contextMenuPos}
         existingDatasets={panels
