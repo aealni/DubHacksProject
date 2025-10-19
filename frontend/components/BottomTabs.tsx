@@ -47,8 +47,8 @@ const TabButton: React.FC<TabButtonProps> = ({
         relative flex items-center min-w-0 max-w-48 h-full px-3 cursor-pointer
         transition-all duration-200 ease-in-out
         ${isActive 
-          ? 'bg-white text-gray-900 border-t-2 border-blue-500' 
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+          ? 'bg-white text-gray-900 border-t-2 border-blue-500 dark:bg-slate-800 dark:text-slate-100 dark:border-blue-400' 
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-100'
         }
         ${isHovered ? 'shadow-sm' : ''}
         focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-inset
@@ -103,9 +103,9 @@ const TabButton: React.FC<TabButtonProps> = ({
       </div>
 
       {/* Close button */}
-      {tab.isCloseable && (isHovered || isActive) && (
+        {tab.isCloseable && (isHovered || isActive) && (
         <button
-          className="flex-shrink-0 ml-2 p-1 rounded hover:bg-gray-300 transition-colors duration-150"
+          className="flex-shrink-0 ml-2 p-1 rounded hover:bg-gray-300 transition-colors duration-150 dark:hover:bg-slate-600"
           onClick={handleClose}
           title={`Close ${tab.title}`}
           aria-label={`Close ${tab.title}`}
@@ -124,7 +124,7 @@ const TabButton: React.FC<TabButtonProps> = ({
 const NewTabButton: React.FC<{ onNewTab: () => void }> = ({ onNewTab }) => {
   return (
     <button
-      className="flex items-center justify-center w-8 h-full text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors duration-150"
+      className="flex items-center justify-center w-8 h-full text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors duration-150 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700"
       onClick={onNewTab}
       title="New Canvas Tab (Ctrl+Alt+N)"
       aria-label="New Canvas Tab"
@@ -243,7 +243,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({
     <div 
       className={`
         fixed bottom-0 left-0 right-0 z-50 
-        bg-gray-50 border-t border-gray-200 shadow-lg
+        bg-gray-50 border-t border-gray-200 shadow-lg dark:bg-slate-900/85 dark:border-slate-700
         ${className}
       `}
       style={{ height: '48px' }}
@@ -253,7 +253,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({
         {/* Left scroll button */}
         {showScrollButtons && (
           <button
-            className="flex-shrink-0 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+            className="flex-shrink-0 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700"
             onClick={() => scrollTabs('left')}
             aria-label="Scroll tabs left"
           >
@@ -287,7 +287,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({
         {/* Right scroll button */}
         {showScrollButtons && (
           <button
-            className="flex-shrink-0 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+            className="flex-shrink-0 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700"
             onClick={() => scrollTabs('right')}
             aria-label="Scroll tabs right"
           >
@@ -298,7 +298,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({
         )}
 
         {/* New tab button */}
-        <div className="flex-shrink-0 border-l border-gray-200">
+        <div className="flex-shrink-0 border-l border-gray-200 dark:border-slate-700">
           <NewTabButton onNewTab={handleNewTab} />
         </div>
       </div>

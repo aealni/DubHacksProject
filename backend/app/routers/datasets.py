@@ -370,6 +370,19 @@ def delete_dataset(dataset_id: int, db: Session = Depends(get_db)):
     dataset = db.query(models.Dataset).filter(models.Dataset.id == dataset_id).first()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
+
+    cleaned_table = cleaned_table_name(dataset_id)
+    raw_table = f"raw_{dataset_id}"
+    backup_table = f"num_backup_{dataset_id}"
+    tables_to_drop = {cleaned_table, raw_table, backup_table}
+
+    # Collect any raw tables recorded on dataset sources before deletion
+    try:
+        for source in dataset.sources or []:
+            if source.raw_table_name:
+                tables_to_drop.add(source.raw_table_name)
+    except Exception as e:
+        logger.warning("Failed collecting source tables for dataset %s: %s", dataset_id, e)
     
     try:
         # Delete related records with synchronize_session=False for better performance
@@ -380,6 +393,10 @@ def delete_dataset(dataset_id: int, db: Session = Depends(get_db)):
         db.query(models.OperationLog).filter(
             models.OperationLog.dataset_id == dataset_id
         ).delete(synchronize_session=False)
+
+        db.query(models.DatasetSource).filter(
+            models.DatasetSource.dataset_id == dataset_id
+        ).delete(synchronize_session=False)
         
         # Delete the dataset record
         db.query(models.Dataset).filter(
@@ -389,15 +406,27 @@ def delete_dataset(dataset_id: int, db: Session = Depends(get_db)):
         # Commit all deletions
         db.commit()
         
-        # Drop the cleaned table outside of the main transaction to avoid locks
-        table_name = cleaned_table_name(dataset_id)
+        # Drop associated SQLite tables outside of the main transaction to avoid locks
         try:
-            # Use separate connection with immediate commit for table drop
             with engine.begin() as conn:
-                conn.exec_driver_sql(f"DROP TABLE IF EXISTS {qi(table_name)}")
+                for name in filter(None, tables_to_drop):
+                    try:
+                        conn.exec_driver_sql(f"DROP TABLE IF EXISTS {qi(name)}")
+                    except Exception as drop_exc:
+                        logger.warning("Failed to drop table %s for dataset %s: %s", name, dataset_id, drop_exc)
+
+                # Drop snapshot tables (snap_<dataset_id>_*) if present
+                snapshot_rows = conn.exec_driver_sql(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE :pattern",
+                    {"pattern": f"snap_{dataset_id}_%"}
+                ).fetchall()
+                for (snap_name,) in snapshot_rows:
+                    try:
+                        conn.exec_driver_sql(f"DROP TABLE IF EXISTS {qi(snap_name)}")
+                    except Exception as drop_exc:
+                        logger.warning("Failed to drop snapshot table %s for dataset %s: %s", snap_name, dataset_id, drop_exc)
         except Exception as e:
-            # Log but don't fail the request if table drop fails
-            logger.warning(f"Failed to drop table {table_name}: {e}")
+            logger.warning("Failed to drop auxiliary tables for dataset %s: %s", dataset_id, e)
     
     except Exception as e:
         db.rollback()
@@ -545,26 +574,6 @@ def reprocess_from_raw(dataset_id: int, config: Optional[schemas.CleaningConfig]
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Reprocess failed: {e}")
     return schemas.MetadataResponse(report=_build_report_block(metadata))
-
-
-@router.delete('/dataset/{dataset_id}')
-def delete_dataset(dataset_id: int, db: Session = Depends(get_db)):
-    dataset = db.query(models.Dataset).filter(models.Dataset.id == dataset_id).first()
-    if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-    # Hard delete: drop cleaned table then remove report & dataset
-    table = cleaned_table_name(dataset_id)
-    try:
-        with engine.connect() as conn:
-            conn.exec_driver_sql(f'DROP TABLE IF EXISTS {table}')
-    except Exception as e:
-        logger.warning("Failed dropping cleaned table %s: %s", table, e)
-    # Delete report
-    db.query(models.CleaningReport).filter(models.CleaningReport.dataset_id == dataset_id).delete()
-    db.delete(dataset)
-    db.commit()
-    return {"status": "deleted"}
-
 
 @router.patch('/dataset/{dataset_id}/cells')
 def edit_cells(dataset_id: int, batch: schemas.CellEditBatch, db: Session = Depends(get_db)):

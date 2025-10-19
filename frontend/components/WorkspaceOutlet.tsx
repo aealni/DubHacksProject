@@ -10,10 +10,10 @@ import {
 
 // Loading component for tab content
 const TabContentLoading: React.FC<{ tabType: string }> = ({ tabType }) => (
-  <div className="flex items-center justify-center h-full bg-gray-50">
+  <div className="flex items-center justify-center h-full bg-gray-50 text-gray-900 dark:bg-slate-900 dark:text-slate-200">
     <div className="text-center">
       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
-      <p className="text-gray-600">Loading {tabType}...</p>
+      <p className="text-gray-600 dark:text-slate-300">Loading {tabType}...</p>
     </div>
   </div>
 );
@@ -44,17 +44,17 @@ class TabErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center h-full bg-red-50">
+        <div className="flex items-center justify-center h-full bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-200">
           <div className="text-center p-8">
             <div className="text-red-500 mb-4">
               <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-red-800 mb-2">
+            <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
               {this.props.tabType} Error
             </h3>
-            <p className="text-red-600 mb-4">
+            <p className="text-red-600 dark:text-red-300 mb-4">
               Something went wrong in this tab. You can try refreshing or closing the tab.
             </p>
             <button
@@ -88,7 +88,7 @@ const TabContent: React.FC<{ tabId: string; tabType: string }> = ({ tabId, tabTy
         return <ModelsTabProvider tabId={tabId} isActive={true} />;
       default:
         return (
-          <div className="flex items-center justify-center h-full bg-gray-50">
+          <div className="flex items-center justify-center h-full bg-gray-50 text-gray-700 dark:bg-slate-900 dark:text-slate-300">
             <div className="text-center">
               <p className="text-gray-600">Unknown tab type: {tabType}</p>
             </div>
@@ -121,9 +121,9 @@ export const WorkspaceOutlet: React.FC<WorkspaceOutletProps> = ({
 
   if (!activeTab) {
     return (
-      <div className={`flex items-center justify-center h-full bg-gray-50 ${className}`}>
+      <div className={`flex items-center justify-center h-full bg-gray-50 text-gray-800 dark:bg-slate-900 dark:text-slate-200 ${className}`}>
         <div className="text-center">
-          <p className="text-gray-600 mb-4">No active tab</p>
+          <p className="text-gray-600 dark:text-slate-300 mb-4">No active tab</p>
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             onClick={() => {

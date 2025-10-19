@@ -15,6 +15,7 @@ import ModelVisualizationPanel from './ModelVisualizationPanel';
 import LayersPanel from './LayersPanel';
 import FeatureBar, { CanvasTool } from './FeatureBar';
 import { useTabsStore } from '../stores/tabsStore';
+import useTheme from '../hooks/useTheme';
 
 // Import extracted utilities
 import { 
@@ -131,6 +132,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
   const [query, setQuery] = useState('');
 
   console.log(`InfiniteCanvas mounting with storageKey: ${storageKey}`);
+
+  const { theme } = useTheme();
 
   // Debug openMenu changes to help diagnose why menu might not appear
   useEffect(() => {
@@ -1737,6 +1740,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     const offsetX = viewport.x % gridSpacing;
     const offsetY = viewport.y % gridSpacing;
 
+    const gridColor = theme === 'dark' ? 'rgba(148, 163, 184, 0.18)' : '#e5e7eb';
+
     // Calculate extended bounds for infinite grid
     const extendedWidth = rect.width + Math.abs(viewport.x) + 2000;
     const extendedHeight = rect.height + Math.abs(viewport.y) + 2000;
@@ -1752,7 +1757,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
           y1={startY}
           x2={x}
           y2={extendedHeight}
-          stroke="#e5e7eb"
+          stroke={gridColor}
           strokeWidth={0.5}
         />
       );
@@ -1767,7 +1772,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
           y1={y}
           x2={extendedWidth}
           y2={y}
-          stroke="#e5e7eb"
+          stroke={gridColor}
           strokeWidth={0.5}
         />
       );
@@ -1778,7 +1783,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         {gridLines}
       </svg>
     );
-  }, [viewport, canvasRef.current]);
+  }, [viewport, theme, canvasRef.current]);
 
   // Render connections between panels
   const renderConnections = () => {

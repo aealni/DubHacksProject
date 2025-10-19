@@ -36,14 +36,14 @@ const tools: { id: CanvasTool; label: string; icon: JSX.Element; hint?: string }
 
 export const FeatureBar: React.FC<FeatureBarProps> = ({ currentTool, onChangeTool, onClearWorkspace, onZoomIn, onZoomOut }) => {
   return (
-    <div className="pointer-events-auto flex items-center gap-1 px-3 py-2 rounded-full shadow-lg border border-slate-300/60 bg-white/80 backdrop-blur-md">
+    <div className="pointer-events-auto flex items-center gap-1 px-3 py-2 rounded-full shadow-lg border border-slate-300/60 bg-white/80 backdrop-blur-md dark:border-slate-600/60 dark:bg-slate-800/80">
       {tools.map(tool => {
         const active = currentTool === tool.id;
         return (
           <button
             key={tool.id}
             onClick={() => onChangeTool(tool.id)}
-            className={`relative group flex flex-col items-center justify-center px-2 py-1 rounded-md text-[11px] font-medium tracking-wide transition-all focus:outline-none ${active ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-600 hover:bg-slate-200/70 active:bg-slate-300'}`}
+            className={`relative group flex flex-col items-center justify-center px-2 py-1 rounded-md text-[11px] font-medium tracking-wide transition-all focus:outline-none ${active ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-600 hover:bg-slate-200/70 active:bg-slate-300 dark:text-slate-200 dark:hover:bg-slate-700/60 dark:active:bg-slate-600/80'}`}
             title={`${tool.label}${tool.hint ? ` (${tool.hint})` : ''}`}
           >
             {tool.icon}
@@ -52,12 +52,12 @@ export const FeatureBar: React.FC<FeatureBarProps> = ({ currentTool, onChangeToo
           </button>
         );
       })}
-      <div className="w-px h-6 bg-slate-300 mx-1" />
+      <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-1" />
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={onZoomOut}
-          className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-base font-semibold text-slate-600 transition hover:bg-slate-200 active:bg-slate-300"
+          className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-base font-semibold text-slate-600 transition hover:bg-slate-200 active:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 dark:active:bg-slate-500"
           title="Zoom out (-)"
           aria-label="Zoom out"
         >
@@ -66,17 +66,17 @@ export const FeatureBar: React.FC<FeatureBarProps> = ({ currentTool, onChangeToo
         <button
           type="button"
           onClick={onZoomIn}
-          className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-base font-semibold text-slate-600 transition hover:bg-slate-200 active:bg-slate-300"
+          className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-base font-semibold text-slate-600 transition hover:bg-slate-200 active:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 dark:active:bg-slate-500"
           title="Zoom in (+)"
           aria-label="Zoom in"
         >
           +
         </button>
       </div>
-      <div className="w-px h-6 bg-slate-300 mx-1" />
+      <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-1" />
       <button
         onClick={onClearWorkspace}
-        className="px-3 py-1.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600"
+        className="px-3 py-1.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200"
         title="Clear workspace"
       >Clear</button>
     </div>

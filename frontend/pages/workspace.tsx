@@ -79,10 +79,10 @@ export default function Workspace() {
           <meta name="description" content="Interactive data cleaning and analysis workspace" />
         </Head>
         
-        <div className="flex items-center justify-center h-full bg-gray-50">
+        <div className="flex items-center justify-center h-full bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-600">Loading workspace...</p>
+            <p className="text-gray-600 dark:text-slate-300">Loading workspace...</p>
           </div>
         </div>
       </div>
@@ -90,7 +90,7 @@ export default function Workspace() {
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden" suppressHydrationWarning>
+    <div className="fixed inset-0 overflow-hidden bg-gray-50 text-gray-900 transition-colors dark:bg-slate-950 dark:text-slate-100" suppressHydrationWarning>
       <Head>
         <title>Universal Data Cleaner - Workspace</title>
         <meta name="description" content="Interactive data cleaning and analysis workspace" />
@@ -117,7 +117,7 @@ export default function Workspace() {
         <button
           type="button"
           onClick={handleOpenEducation}
-          className="fixed top-4 right-4 z-[2500] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-lg transition hover:bg-gray-50"
+          className="fixed top-4 right-4 z-[2500] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-lg transition hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
           aria-label="Open education overlay"
         >
           Open Education
