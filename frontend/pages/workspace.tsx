@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import BottomTabs from '../components/BottomTabs';
 import WorkspaceOutlet from '../components/WorkspaceOutlet';
+import EducationOverlay from '../components/EducationOverlay';
 import { useTabsStore } from '../stores/tabsStore';
 import { useTabKeyboardShortcuts } from '../hooks/useTabKeyboardShortcuts';
 
 export default function Workspace() {
   const { loadFromStorage, syncWithUrl } = useTabsStore();
   const [isHydrated, setIsHydrated] = useState(false);
+  const [showEducationOverlay, setShowEducationOverlay] = useState(false);
+  const [educationModeEnabled, setEducationModeEnabled] = useState(false);
+  const [isEducationDetailOpen, setIsEducationDetailOpen] = useState(false);
+  const [lastEducationView, setLastEducationView] = useState<'main' | 'detail'>('main');
+  const [lastDetailAnchor, setLastDetailAnchor] = useState<string | null>(null);
+  const [targetEducationView, setTargetEducationView] = useState<'main' | 'detail' | null>(null);
+  const router = useRouter();
   
   // Enable keyboard shortcuts
   useTabKeyboardShortcuts();
@@ -23,6 +32,43 @@ export default function Workspace() {
     // Mark as hydrated to prevent hydration mismatches
     setIsHydrated(true);
   }, [loadFromStorage, syncWithUrl]);
+
+  useEffect(() => {
+    const mode = router.query?.mode;
+    if (typeof mode === 'string' && mode.toLowerCase() === 'education') {
+      setShowEducationOverlay(true);
+      setEducationModeEnabled(true);
+    }
+  }, [router.query?.mode]);
+
+  const handleCloseEducationOverlay = () => {
+    setShowEducationOverlay(false);
+    setEducationModeEnabled(true);
+    setTargetEducationView(null);
+  };
+
+  const handleEducationOverlayStateChange = (state: 'main' | 'detail' | 'none') => {
+    if (state === 'detail') {
+      setIsEducationDetailOpen(true);
+      setLastEducationView('detail');
+    } else if (state === 'main') {
+      setIsEducationDetailOpen(false);
+      setLastEducationView('main');
+    } else {
+      setIsEducationDetailOpen(false);
+    }
+
+    setTargetEducationView(null);
+  };
+
+  const handleOpenEducation = () => {
+    if (lastEducationView === 'detail' && lastDetailAnchor) {
+      setTargetEducationView('detail');
+    } else {
+      setShowEducationOverlay(true);
+      setTargetEducationView('main');
+    }
+  };
 
   // Show a loading state during hydration
   if (!isHydrated) {
@@ -55,6 +101,28 @@ export default function Workspace() {
       
       {/* Bottom tab bar */}
       <BottomTabs />
+
+      <EducationOverlay
+        isOpen={showEducationOverlay}
+        onClose={handleCloseEducationOverlay}
+        onOpenMainOverlay={() => setShowEducationOverlay(true)}
+        onDetailPanelChange={setIsEducationDetailOpen}
+        onOverlayStateChange={handleEducationOverlayStateChange}
+        onRequestCloseMainOverlay={handleCloseEducationOverlay}
+        onLastDetailAnchorChange={setLastDetailAnchor}
+        targetView={targetEducationView}
+      />
+
+      {educationModeEnabled && !showEducationOverlay && !isEducationDetailOpen && targetEducationView !== 'detail' && (
+        <button
+          type="button"
+          onClick={handleOpenEducation}
+          className="fixed top-4 right-4 z-[2500] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-lg transition hover:bg-gray-50"
+          aria-label="Open education overlay"
+        >
+          Open Education
+        </button>
+      )}
     </div>
   );
 }
