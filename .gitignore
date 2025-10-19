@@ -51,11 +51,21 @@ dmypy.json
 *.db
 *.db-shm
 *.db-wal
+*.db-journal
+*.db.lock
+*.db.tmp
+*.db.backup
+*.db.orig
+*.db.old
 *.sqlite
 *.sqlite3
 *.sqlite-journal
 *.sqlite-wal
+*.sqlite-shm
+*.sqlite.tmp
+*.sqlite.backup
 app.db
+**/app.db*
 
 # Environment variables
 .env
@@ -87,6 +97,21 @@ out/
 **/.next/
 **/out/
 .vercel
+**/.next/cache/
+**/.next/server/
+**/.next/static/
+**/.next/analyze/
+**/.next/trace
+**/.next/BUILD_ID
+**/.next/react-loadable-manifest.json
+**/.next/build-manifest.json
+**/.next/server/app/
+**/.next/server/pages/
+**/telemetry.json
+**/.turbo/
+**/turbo/
+**/turbo.json
+**/.swc/
 
 # IDE files
 .vscode/settings.json
