@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
@@ -82,53 +82,72 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
     }
   }, [isExpanded, availableColumns, isResizing, hasManualResize, onPanelUpdate, panel.id]);
 
-  // Fetch available columns when panel is created or dataset changes
-  useEffect(() => {
-    const datasetId = panel.data?.datasetId;
-    console.log('ModelPanel useEffect - datasetId:', datasetId);
-    console.log('ModelPanel useEffect - panel.data:', panel.data);
-    
-    if (datasetId) {
-      fetchAvailableColumns();
-    } else {
-      console.warn('No datasetId found in panel data');
-    }
-  }, [panel.data?.datasetId]);
-
-  const fetchAvailableColumns = async () => {
+  const fetchAvailableColumns = useCallback(async () => {
     const datasetId = panel.data?.datasetId;
     console.log('fetchAvailableColumns called for dataset:', datasetId);
-    
+
     if (!datasetId) {
       console.error('No datasetId available for fetching columns');
       setError('No dataset ID available');
       return;
     }
-    
+
     try {
       const response = await fetch(`${BACKEND_URL}/datasets/${parseInt(datasetId)}/columns`);
       console.log('Columns response status:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Columns data received:', data);
-        // Backend returns {numerical: [...], categorical: [...], datetime: [...], all: [...]}
-        // We want to use 'all' which contains all column names
-        const columns = data.all || data.columns || [];
-        console.log('Parsed columns:', columns);
-        setAvailableColumns(columns);
-        // Auto-select first column as target if none selected
-        if (!targetColumn && columns.length > 0) {
-          setTargetColumn(columns[0]);
-        }
-      } else {
+      if (!response.ok) {
         console.error('Failed to fetch columns, status:', response.status);
         setError(`Failed to fetch columns (status: ${response.status})`);
+        return;
       }
+
+      const data = await response.json();
+      console.log('Columns data received:', data);
+
+      const combined = Array.from(
+        new Set(
+          [
+            ...(Array.isArray(data?.all) ? data.all : []),
+            ...(Array.isArray(data?.columns) ? data.columns : []),
+            ...(Array.isArray(data?.numerical) ? data.numerical : []),
+            ...(Array.isArray(data?.categorical) ? data.categorical : []),
+            ...(Array.isArray(data?.datetime) ? data.datetime : [])
+          ]
+            .filter((col): col is string => typeof col === 'string')
+            .map(col => col.trim())
+            .filter(col => col && col !== '_rowid')
+        )
+      );
+
+      console.log('Sanitized columns:', combined);
+      setAvailableColumns(combined);
+
+      setTargetColumn(prev => {
+        if (prev && combined.includes(prev)) {
+          return prev;
+        }
+        return combined[0] ?? '';
+      });
+
+      setFeatureColumns(prev => prev.filter(col => combined.includes(col)));
+      setSelectedXAxis(prev => (prev && combined.includes(prev) ? prev : combined[0] ?? ''));
     } catch (error) {
       console.error('Error fetching columns:', error);
       setError('Failed to fetch columns');
     }
-  };
+  }, [panel.data?.datasetId]);
+
+  useEffect(() => {
+    const datasetId = panel.data?.datasetId;
+    console.log('ModelPanel useEffect - datasetId:', datasetId);
+    console.log('ModelPanel useEffect - panel.data:', panel.data);
+
+    if (datasetId) {
+      void fetchAvailableColumns();
+    } else {
+      console.warn('No datasetId found in panel data');
+    }
+  }, [fetchAvailableColumns, panel.data?.datasetId]);
 
   const trainModel = async () => {
     const datasetId = panel.data?.datasetId || panel.data?.dataset_id || panel.data?.id;

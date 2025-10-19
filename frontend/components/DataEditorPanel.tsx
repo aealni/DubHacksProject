@@ -98,7 +98,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
     setError(null);
     try {
       const offset = currentPage * pageSize;
-      const response = await fetch(`${BACKEND_URL}/dataset/${datasetId}/preview?limit=${pageSize}&offset=${offset}`);
+  const response = await fetch(`${BACKEND_URL}/dataset/${datasetId}/preview?limit=${pageSize}&offset=${offset}`, { cache: 'no-store' });
       
       if (response.ok) {
         const result = await response.json();

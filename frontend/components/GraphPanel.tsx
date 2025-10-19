@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
@@ -23,6 +23,11 @@ interface GraphTypeOption {
   description: string;
   requirements: GraphRequirements;
 }
+
+type GenerateGraphOptions = {
+  trigger?: 'manual' | 'auto';
+  silent?: boolean;
+};
 
 const GRAPH_TYPE_OPTIONS: GraphTypeOption[] = [
   {
@@ -332,8 +337,18 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
   const [lineColor, setLineColor] = useState<string>(panel.data?.lineColor || '');
   const [isGraphMenuOpen, setIsGraphMenuOpen] = useState(false);
   const [isPresentationOpen, setIsPresentationOpen] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingDatasetSync, setPendingDatasetSync] = useState(false);
+  const [lastAutoRefreshAt, setLastAutoRefreshAt] = useState<number | null>(null);
+  const [needsDataSync, setNeedsDataSync] = useState(false);
   const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const graphMenuRef = useRef<HTMLDivElement | null>(null);
+  const queuedAutoRefreshRef = useRef<boolean>(false);
+
+  const datasetIdentifier = panel.data?.datasetId ?? panel.data?.dataset_id ?? panel.data?.id;
+  const datasetIdString = datasetIdentifier != null ? String(datasetIdentifier) : null;
+  const hasGeneratedGraph = Boolean(panel.data?.resultPanelId);
+  const autoRefreshOnDataUpdate = panel.data?.autoRefreshOnDataUpdate ?? true;
 
   const headerHeight = 56;
 
@@ -551,98 +566,232 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
     };
   }, [isResizing, handleResizeMove, handleResizeEnd]);
 
-  const loadDatasetColumns = async () => {
+  const loadDatasetColumns = useCallback(async (options?: { silent?: boolean }) => {
+    if (!datasetIdentifier) {
+      return;
+    }
+
+    const { silent = false } = options ?? {};
+
+    if (!silent) {
+      setIsLoading(true);
+    }
+
     try {
-      console.log('Loading columns for dataset:', panel.data.datasetId);
-      const response = await fetch(`${BACKEND_URL}/dataset/${panel.data.datasetId}/metadata`);
-      if (response.ok) {
-        const metadata = await response.json();
-        console.log('Metadata response:', metadata);
-        
-        // Try multiple possible column sources
-        let columns: string[] = [];
-        if (metadata.report?.dtype_inference) {
-          columns = Object.keys(metadata.report.dtype_inference);
-        } else if (metadata.report?.column_types) {
-          columns = Object.keys(metadata.report.column_types);
-        } else if (metadata.columns) {
-          columns = metadata.columns;
-        }
-        
-        console.log('Available columns:', columns);
-        const filteredColumns = columns.filter(col => col !== '_rowid');
-        setAvailableColumns(filteredColumns);
-
-        const inferType = (col: string) => (metadata.report?.dtype_inference?.[col] || metadata.report?.column_types?.[col] || '').toString().toLowerCase();
-
-        const numericCols = columns.filter(col => {
-          const type = inferType(col);
-          return type.includes('numeric') || type.includes('int') || type.includes('float') || type.includes('number');
-        });
-
-        const categoricalCols = columns.filter(col => {
-          const type = inferType(col);
-          return type.includes('object') || type.includes('string') || type.includes('category');
-        });
-
-        const datetimeCols = columns.filter(col => {
-          const type = inferType(col);
-          return type.includes('date') || type.includes('time');
-        });
-
-        setNumericColumns(numericCols);
-        setCategoricalColumns(categoricalCols);
-        setDatetimeColumns(datetimeCols);
-
-        if (!selectedXColumn) {
-          if (numericCols.length > 0) {
-            setSelectedXColumn(numericCols[0]);
-          } else if (filteredColumns.length > 0) {
-            setSelectedXColumn(filteredColumns[0]);
-          }
-        }
-
-        if (!selectedYColumn) {
-          if (numericCols.length > 1) {
-            setSelectedYColumn(numericCols[1]);
-          } else if (filteredColumns.length > 1) {
-            setSelectedYColumn(filteredColumns[1]);
-          }
-        }
-
-        if (!selectedColumn) {
-          if (numericCols.length > 0) {
-            setSelectedColumn(numericCols[0]);
-          } else if (filteredColumns.length > 0) {
-            setSelectedColumn(filteredColumns[0]);
-          }
-        }
-
-        if (selectedYColumns.length === 0 && numericCols.length >= 2) {
-          setSelectedYColumns(numericCols.slice(0, Math.min(3, numericCols.length)));
-        }
-
-        if (selectedColumnsList.length === 0 && filteredColumns.length >= 2) {
-          setSelectedColumnsList(filteredColumns.slice(0, Math.min(4, filteredColumns.length)));
-        }
-      } else {
-        console.error('Failed to load metadata:', response.status);
-        setError('Failed to load dataset columns');
+      const response = await fetch(`${BACKEND_URL}/dataset/${datasetIdentifier}/metadata`, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Failed to load dataset columns (status ${response.status})`);
       }
+
+      const metadata = await response.json();
+
+      const inferredColumns = metadata.report?.dtype_inference
+        ? Object.keys(metadata.report.dtype_inference)
+        : metadata.report?.column_types
+          ? Object.keys(metadata.report.column_types)
+          : [];
+
+      const columnsFromMetadata = Array.isArray(metadata.columns) ? metadata.columns : [];
+      const columnsFromPreview = Array.isArray(metadata.preview?.columns) ? metadata.preview.columns : [];
+
+      const filteredColumns = Array.from(
+        new Set(
+          [...columnsFromMetadata, ...columnsFromPreview, ...inferredColumns]
+            .filter((col): col is string => typeof col === 'string')
+            .map(col => col.trim())
+            .filter(col => col && col !== '_rowid')
+        )
+      );
+      setAvailableColumns(filteredColumns);
+
+      const inferType = (col: string) => (metadata.report?.dtype_inference?.[col] || metadata.report?.column_types?.[col] || '').toString().toLowerCase();
+
+      const numericCols = filteredColumns.filter(col => {
+        const type = inferType(col);
+        return type.includes('numeric') || type.includes('int') || type.includes('float') || type.includes('number');
+      });
+
+      const categoricalCols = filteredColumns.filter(col => {
+        const type = inferType(col);
+        return type.includes('object') || type.includes('string') || type.includes('category');
+      });
+
+      const datetimeCols = filteredColumns.filter(col => {
+        const type = inferType(col);
+        return type.includes('date') || type.includes('time');
+      });
+
+      setNumericColumns(numericCols);
+      setCategoricalColumns(categoricalCols);
+      setDatetimeColumns(datetimeCols);
+
+      const ensureColumn = (current: string, fallbackList: string[], fallbackAll: string[]) => {
+        if (current && fallbackAll.includes(current)) {
+          return current;
+        }
+        if (fallbackList.length > 0) {
+          return fallbackList[0];
+        }
+        if (fallbackAll.length > 0) {
+          return fallbackAll[0];
+        }
+        return '';
+      };
+
+      setSelectedXColumn(prev => ensureColumn(prev, numericCols, filteredColumns));
+      setSelectedYColumn(prev => ensureColumn(prev, numericCols.slice(1), filteredColumns));
+      setSelectedColumn(prev => ensureColumn(prev, numericCols, filteredColumns));
+
+      setSelectedColumnsList(prev => {
+        if (prev.length === 0) {
+          const defaults = filteredColumns.slice(0, Math.min(4, filteredColumns.length));
+          return defaults;
+        }
+        const sanitized = prev.filter(col => filteredColumns.includes(col));
+        return sanitized.length > 0 ? sanitized : filteredColumns.slice(0, Math.min(4, filteredColumns.length));
+      });
+
+      setSelectedYColumns(prev => {
+        if (prev.length === 0 && numericCols.length >= 2) {
+          return numericCols.slice(0, Math.min(3, numericCols.length));
+        }
+        const sanitized = prev.filter(col => filteredColumns.includes(col));
+        if (sanitized.length > 0) {
+          return sanitized;
+        }
+        if (numericCols.length >= 2) {
+          return numericCols.slice(0, Math.min(3, numericCols.length));
+        }
+        return sanitized;
+      });
+
+      setGroupByColumn(prev => (prev && filteredColumns.includes(prev) ? prev : ''));
+      setColorByColumn(prev => (prev && filteredColumns.includes(prev) ? prev : ''));
+      setSizeByColumn(prev => (prev && numericCols.includes(prev) ? prev : ''));
+
+      setError(null);
     } catch (error) {
       console.error('Failed to load dataset columns:', error);
-      setError('Failed to load dataset columns');
+      setError(error instanceof Error ? error.message : 'Failed to load dataset columns');
+    } finally {
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [
+    datasetIdentifier,
+    setIsLoading,
+    setAvailableColumns,
+    setNumericColumns,
+    setCategoricalColumns,
+    setDatetimeColumns,
+    setSelectedXColumn,
+    setSelectedYColumn,
+    setSelectedColumn,
+    setSelectedColumnsList,
+    setSelectedYColumns,
+    setGroupByColumn,
+    setColorByColumn,
+    setSizeByColumn,
+    setError
+  ]);
 
-  const generateGraph = async () => {
+  const activeGraphOption = useMemo(() => {
+    if (!selectedGraphType) return null;
+    return GRAPH_TYPE_OPTIONS.find(option => option.value === selectedGraphType) || null;
+  }, [selectedGraphType]);
+
+  const activeRequirements = activeGraphOption?.requirements ?? EMPTY_REQUIREMENTS;
+
+  const graphRequirementsCopy = useMemo(() => {
+    if (!selectedGraphType || !activeGraphOption) {
+      return 'Select a graph template to see the required inputs.';
+    }
+    if (selectedGraphType === 'custom') {
+      return 'Reference dataset columns using "$column:ColumnName" inside your JSON arguments to call any Matplotlib, Seaborn, or Pandas plotting function.';
+    }
+    return activeGraphOption.description;
+  }, [selectedGraphType, activeGraphOption]);
+
+  const needsXColumn = activeRequirements.x !== 'unused';
+  const needsYColumn = activeRequirements.y !== 'unused';
+  const needsSingleColumn = activeRequirements.column !== 'unused';
+  const needsColumnsList = activeRequirements.columns !== 'unused';
+  const needsYColumns = activeRequirements.yColumns !== 'unused';
+  const allowsGroupBy = activeRequirements.groupBy !== 'unused';
+  const allowsColorBy = activeRequirements.colorBy !== 'unused';
+  const allowsSizeBy = activeRequirements.sizeBy !== 'unused';
+  const requiresXValue = activeRequirements.x === 'required';
+  const requiresYValue = activeRequirements.y === 'required';
+  const requiresSingleColumn = activeRequirements.column === 'required';
+  const requiresColumnsList = activeRequirements.columns === 'required';
+  const requiresYColumnsValue = activeRequirements.yColumns === 'required';
+  const supportsLineStyling = selectedGraphType ? ['line', 'scatter', 'area', 'custom'].includes(selectedGraphType) : false;
+  const hasSelectedGraph = Boolean(selectedGraphType && activeGraphOption);
+  const generateDisabled = isLoading
+    || isGenerating
+    || pendingDatasetSync
+    || !hasSelectedGraph
+    || (requiresXValue && !selectedXColumn)
+    || (requiresYValue && !selectedYColumn)
+    || (requiresSingleColumn && !selectedColumn)
+    || (requiresColumnsList && selectedColumnsList.length === 0)
+    || (requiresYColumnsValue && selectedYColumns.length === 0)
+    || (selectedGraphType === 'custom' && (!customFunction.trim() || !!customArgsError || !!customKwargsError));
+
+  const generateGraph = useCallback(async (options?: GenerateGraphOptions) => {
+    const trigger = options?.trigger ?? 'manual';
+    const silent = options?.silent ?? false;
+
+    if (isGenerating) {
+      return;
+    }
+
     if (availableColumns.length === 0) {
-      setError('Columns are still loading. Please retry in a moment.');
+      if (trigger === 'manual') {
+        setError('Columns are still loading. Please retry in a moment.');
+      }
       return;
     }
 
     if (!hasSelectedGraph || !activeGraphOption) {
-      setError('Please select a graph template before generating.');
+      if (trigger === 'manual') {
+        setError('Please select a graph template before generating.');
+      }
+      return;
+    }
+
+    const selectedCandidates = [
+      selectedXColumn,
+      selectedYColumn,
+      selectedColumn,
+      groupByColumn,
+      colorByColumn,
+      sizeByColumn,
+      ...selectedColumnsList,
+      ...selectedYColumns
+    ].filter((col): col is string => Boolean(col));
+
+    const invalidColumns = Array.from(new Set(selectedCandidates.filter(col => !availableColumns.includes(col))));
+    if (invalidColumns.length > 0) {
+      const invalidSet = new Set(invalidColumns);
+
+      setSelectedXColumn(prev => (prev && invalidSet.has(prev) ? '' : prev));
+      setSelectedYColumn(prev => (prev && invalidSet.has(prev) ? '' : prev));
+      setSelectedColumn(prev => (prev && invalidSet.has(prev) ? '' : prev));
+      setGroupByColumn(prev => (prev && invalidSet.has(prev) ? '' : prev));
+      setColorByColumn(prev => (prev && invalidSet.has(prev) ? '' : prev));
+      setSizeByColumn(prev => (prev && invalidSet.has(prev) ? '' : prev));
+      setSelectedColumnsList(prev => prev.filter(col => !invalidSet.has(col)));
+      setSelectedYColumns(prev => prev.filter(col => !invalidSet.has(col)));
+
+      if (trigger === 'manual') {
+        setError(`These columns are no longer available in the dataset: ${invalidColumns.join(', ')}`);
+      }
+
+      setNeedsDataSync(true);
+      queuedAutoRefreshRef.current = false;
+      await loadDatasetColumns({ silent: true });
       return;
     }
 
@@ -668,23 +817,35 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
         missingFields.push('a custom plotting function');
       }
       if (customArgsError) {
-        setError(customArgsError);
+        if (trigger === 'manual') {
+          setError(customArgsError);
+        }
         return;
       }
       if (customKwargsError) {
-        setError(customKwargsError);
+        if (trigger === 'manual') {
+          setError(customKwargsError);
+        }
         return;
       }
     }
 
     if (missingFields.length > 0) {
-      const message = `Please provide ${missingFields.join(', ').replace(/, ([^,]*)$/, ' and $1')}.`;
-      setError(message);
+      if (trigger === 'manual') {
+        const message = `Please provide ${missingFields.join(', ').replace(/, ([^,]*)$/, ' and $1')}.`;
+        setError(message);
+      }
       return;
     }
 
-    setIsLoading(true);
+    setIsGenerating(true);
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
+
+    const supportsLineStylingLocal = selectedGraphType ? ['line', 'scatter', 'area', 'custom'].includes(selectedGraphType) : false;
+    const shouldAggregate = Boolean(activeRequirements.aggregation);
 
     const independentLabel = selectedXColumn || 'Independent Variable';
     const dependentPieces: string[] = [];
@@ -702,7 +863,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
     const trimmedXLabel = xLabelOverride.trim();
     const trimmedYLabel = yLabelOverride.trim();
     const trimmedLineColor = lineColor.trim();
-    const defaultGraphLabel = activeGraphOption?.label || 'Graph';
+    const defaultGraphLabel = activeGraphOption.label || 'Graph';
 
     let fallbackTitle: string;
     if (selectedGraphType === 'custom') {
@@ -735,10 +896,10 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
     } else if (selectedYColumns.length > 0) {
       configPayload.ylabel = selectedYColumns.join(', ');
     }
-    if (supportsLineStyling && lineStyle) {
+    if (supportsLineStylingLocal && lineStyle) {
       configPayload.line_style = lineStyle;
     }
-    if (supportsLineStyling && trimmedLineColor) {
+    if (supportsLineStylingLocal && trimmedLineColor) {
       configPayload.line_color = trimmedLineColor;
     }
 
@@ -771,7 +932,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
     if (allowsSizeBy && sizeByColumn) {
       requestPayload.size_by = sizeByColumn;
     }
-    if (activeRequirements.aggregation && aggregation) {
+    if (shouldAggregate && aggregation) {
       requestPayload.aggregation = aggregation;
     }
 
@@ -824,8 +985,8 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
         titleOverride: trimmedTitle || undefined,
         xLabelOverride: trimmedXLabel || undefined,
         yLabelOverride: trimmedYLabel || undefined,
-  lineStyle: supportsLineStyling && lineStyle ? lineStyle : undefined,
-  lineColor: supportsLineStyling && trimmedLineColor ? trimmedLineColor : undefined,
+        lineStyle: supportsLineStylingLocal && lineStyle ? lineStyle : undefined,
+        lineColor: supportsLineStylingLocal && trimmedLineColor ? trimmedLineColor : undefined,
         xColumn: selectedXColumn,
         yColumn: selectedYColumn,
         column: selectedColumn,
@@ -834,7 +995,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
         groupBy: groupByColumn,
         colorBy: colorByColumn,
         sizeBy: sizeByColumn,
-        aggregation: activeRequirements.aggregation ? aggregation : undefined,
+        aggregation: shouldAggregate ? aggregation : undefined,
         title: chartTitle,
         graphData: result,
         customPlot: customPlotSpec
@@ -863,8 +1024,8 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
         titleOverride: trimmedTitle,
         xLabelOverride: trimmedXLabel,
         yLabelOverride: trimmedYLabel,
-        lineStyle: supportsLineStyling ? lineStyle : '',
-        lineColor: supportsLineStyling ? trimmedLineColor : ''
+        lineStyle: supportsLineStylingLocal ? lineStyle : '',
+        lineColor: supportsLineStylingLocal ? trimmedLineColor : ''
       };
 
       if (selectedGraphType !== 'custom') {
@@ -873,18 +1034,181 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
 
       onPanelUpdate(panel.id, { data: updatedData });
 
-      setShowSuccessMessage(true);
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
+      if (trigger === 'manual') {
+        setShowSuccessMessage(true);
+        if (successTimeoutRef.current) {
+          clearTimeout(successTimeoutRef.current);
+        }
+        successTimeoutRef.current = setTimeout(() => setShowSuccessMessage(false), 4000);
+      } else {
+        setShowSuccessMessage(false);
+        setLastAutoRefreshAt(Date.now());
       }
-      successTimeoutRef.current = setTimeout(() => setShowSuccessMessage(false), 4000);
+      setNeedsDataSync(false);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to generate graph');
+      if (trigger === 'manual') {
+        setError(err instanceof Error ? err.message : 'Failed to generate graph');
+      } else {
+        setNeedsDataSync(true);
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
+      setIsGenerating(false);
     }
-  };
+  }, [
+    activeRequirements,
+    activeGraphOption,
+    aggregation,
+    availableColumns,
+    colorByColumn,
+    customArgsError,
+  customArgsPreview,
+  customArgsText,
+    customFunction,
+    customKwargsError,
+    customKwargsPreview,
+  customKwargsText,
+    customModule,
+    groupByColumn,
+    hasSelectedGraph,
+    isGenerating,
+    lineColor,
+    lineStyle,
+    needsColumnsList,
+    needsSingleColumn,
+    needsXColumn,
+    needsYColumn,
+    needsYColumns,
+    onGraphGenerated,
+    onPanelUpdate,
+    panel.data,
+    panel.id,
+    requiresColumnsList,
+    requiresSingleColumn,
+    requiresXValue,
+    requiresYColumnsValue,
+    requiresYValue,
+    selectedColumn,
+    selectedColumnsList,
+    selectedGraphType,
+    selectedXColumn,
+    selectedYColumn,
+    selectedYColumns,
+    setError,
+    setIsGenerating,
+    setIsLoading,
+    setLastAutoRefreshAt,
+    setNeedsDataSync,
+    setShowSuccessMessage,
+    sizeByColumn,
+    successTimeoutRef,
+    titleOverride,
+    xLabelOverride,
+    yLabelOverride
+  ]);
+
+  const performDatasetSync = useCallback(async (trigger: 'manual' | 'auto', silentGraph: boolean) => {
+    if (!datasetIdentifier) {
+      return;
+    }
+
+    setPendingDatasetSync(true);
+    try {
+      await loadDatasetColumns({ silent: true });
+      await generateGraph({ trigger, silent: silentGraph });
+    } catch (error) {
+      if (trigger === 'auto') {
+        console.warn('[GraphPanel] Auto refresh failed', error);
+      } else {
+        console.error('[GraphPanel] Manual refresh failed', error);
+      }
+    } finally {
+      setPendingDatasetSync(false);
+    }
+  }, [datasetIdentifier, generateGraph, loadDatasetColumns]);
+
+  const handleManualRefresh = useCallback(async () => {
+    if (pendingDatasetSync || isGenerating) {
+      return;
+    }
+    setNeedsDataSync(true);
+    queuedAutoRefreshRef.current = false;
+    await performDatasetSync('manual', false);
+  }, [isGenerating, pendingDatasetSync, performDatasetSync]);
+
+  const handleToggleAutoRefresh = useCallback((next: boolean) => {
+    onPanelUpdate(panel.id, {
+      data: {
+        ...panel.data,
+        autoRefreshOnDataUpdate: next
+      }
+    });
+
+    if (next && needsDataSync && !pendingDatasetSync && !isGenerating) {
+      queuedAutoRefreshRef.current = false;
+      void performDatasetSync('auto', true);
+    }
+  }, [isGenerating, needsDataSync, onPanelUpdate, panel.data, panel.id, pendingDatasetSync, performDatasetSync]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !datasetIdString) {
+      return;
+    }
+
+    const handleDatasetUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ datasetId?: number | string; source?: string }>;
+      const detail = customEvent.detail;
+      if (!detail) {
+        return;
+      }
+
+      const eventId = detail.datasetId;
+      if (eventId === undefined || eventId === null) {
+        return;
+      }
+
+      if (String(eventId) !== datasetIdString) {
+        return;
+      }
+
+      if (detail.source === 'graph-panel') {
+        return;
+      }
+
+      setNeedsDataSync(true);
+
+      if (!autoRefreshOnDataUpdate) {
+        return;
+      }
+
+      if (pendingDatasetSync || isGenerating) {
+        queuedAutoRefreshRef.current = true;
+        return;
+      }
+
+      queuedAutoRefreshRef.current = false;
+      void performDatasetSync('auto', true);
+    };
+
+    window.addEventListener('dataset-updated', handleDatasetUpdated as EventListener);
+    return () => window.removeEventListener('dataset-updated', handleDatasetUpdated as EventListener);
+  }, [autoRefreshOnDataUpdate, datasetIdString, isGenerating, pendingDatasetSync, performDatasetSync]);
+
+  useEffect(() => {
+    if (
+      !pendingDatasetSync &&
+      queuedAutoRefreshRef.current &&
+      autoRefreshOnDataUpdate &&
+      needsDataSync &&
+      !isGenerating
+    ) {
+      queuedAutoRefreshRef.current = false;
+      void performDatasetSync('auto', true);
+    }
+  }, [autoRefreshOnDataUpdate, isGenerating, needsDataSync, pendingDatasetSync, performDatasetSync]);
 
   const getGraphTypeName = (type: string) => {
     if (!type) {
@@ -892,14 +1216,6 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
     }
     const match = GRAPH_TYPE_OPTIONS.find(option => option.value === type);
     return match ? match.label : 'Graph Builder';
-  };
-
-  const handleMultiSelectChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-    setter: (values: string[]) => void
-  ) => {
-    const selectedValues = Array.from(event.target.selectedOptions).map(option => option.value);
-    setter(selectedValues);
   };
 
   const handleGraphTypeChange = (value: string) => {
@@ -946,47 +1262,6 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
       }
     });
   };
-
-  const activeGraphOption = useMemo(() => {
-    if (!selectedGraphType) return null;
-    return GRAPH_TYPE_OPTIONS.find(option => option.value === selectedGraphType) || null;
-  }, [selectedGraphType]);
-
-  const activeRequirements = activeGraphOption?.requirements ?? EMPTY_REQUIREMENTS;
-
-  const graphRequirementsCopy = useMemo(() => {
-    if (!selectedGraphType || !activeGraphOption) {
-      return 'Select a graph template to see the required inputs.';
-    }
-    if (selectedGraphType === 'custom') {
-      return 'Reference dataset columns using "$column:ColumnName" inside your JSON arguments to call any Matplotlib, Seaborn, or Pandas plotting function.';
-    }
-    return activeGraphOption.description;
-  }, [selectedGraphType, activeGraphOption]);
-
-  const needsXColumn = activeRequirements.x !== 'unused';
-  const needsYColumn = activeRequirements.y !== 'unused';
-  const needsSingleColumn = activeRequirements.column !== 'unused';
-  const needsColumnsList = activeRequirements.columns !== 'unused';
-  const needsYColumns = activeRequirements.yColumns !== 'unused';
-  const allowsGroupBy = activeRequirements.groupBy !== 'unused';
-  const allowsColorBy = activeRequirements.colorBy !== 'unused';
-  const allowsSizeBy = activeRequirements.sizeBy !== 'unused';
-  const requiresXValue = activeRequirements.x === 'required';
-  const requiresYValue = activeRequirements.y === 'required';
-  const requiresSingleColumn = activeRequirements.column === 'required';
-  const requiresColumnsList = activeRequirements.columns === 'required';
-  const requiresYColumnsValue = activeRequirements.yColumns === 'required';
-  const supportsLineStyling = selectedGraphType ? ['line', 'scatter', 'area', 'custom'].includes(selectedGraphType) : false;
-  const hasSelectedGraph = Boolean(selectedGraphType && activeGraphOption);
-  const generateDisabled = isLoading
-    || !hasSelectedGraph
-    || (requiresXValue && !selectedXColumn)
-    || (requiresYValue && !selectedYColumn)
-    || (requiresSingleColumn && !selectedColumn)
-    || (requiresColumnsList && selectedColumnsList.length === 0)
-    || (requiresYColumnsValue && selectedYColumns.length === 0)
-    || (selectedGraphType === 'custom' && (!customFunction.trim() || !!customArgsError || !!customKwargsError));
 
   return (
     <div
@@ -1039,6 +1314,62 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
                 View result
               </button>
             )}
+          </div>
+        )}
+
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-gray-700">Dataset sync</span>
+            <span className="text-[10px] text-gray-500">
+              {autoRefreshOnDataUpdate
+                ? 'Automatically refresh this graph when the dataset changes.'
+                : 'Auto-refresh is off. Use refresh after editing the dataset.'}
+            </span>
+            {lastAutoRefreshAt && (
+              <span className="text-[10px] text-gray-400">
+                Last auto refresh {new Date(lastAutoRefreshAt).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+          <label className="inline-flex items-center gap-2 text-[11px] font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={autoRefreshOnDataUpdate}
+              onChange={(event) => handleToggleAutoRefresh(event.target.checked)}
+              className="h-3.5 w-3.5 rounded border border-gray-400 text-gray-700 focus:ring-gray-500"
+            />
+            Auto-refresh
+          </label>
+        </div>
+
+        {(needsDataSync || pendingDatasetSync) && (
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+            <div className="space-y-0.5">
+              <p className="font-semibold">
+                {pendingDatasetSync ? 'Updating with latest dataset…' : 'Dataset updated'}
+              </p>
+              <p className="text-[10px] text-amber-700">
+                {pendingDatasetSync
+                  ? 'Pulling updated columns and regenerating this visualization.'
+                  : autoRefreshOnDataUpdate
+                    ? 'New dataset changes detected. Auto-refresh will regenerate shortly.'
+                    : 'New dataset changes detected. Refresh to update this graph.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleManualRefresh()}
+                disabled={pendingDatasetSync || isGenerating || isLoading}
+                className={`rounded border px-2 py-1 text-[11px] font-medium ${
+                  pendingDatasetSync || isGenerating || isLoading
+                    ? 'cursor-not-allowed border-amber-200 text-amber-300'
+                    : 'border-amber-600 text-amber-700 hover:bg-amber-100'
+                }`}
+              >
+                {pendingDatasetSync ? 'Refreshing…' : autoRefreshOnDataUpdate ? 'Refresh now' : 'Refresh now'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -1126,7 +1457,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
             <div className="py-2 text-xs text-gray-500">
               Loading columns from dataset {panel.data.datasetId}...
               <button
-                onClick={loadDatasetColumns}
+                onClick={() => void loadDatasetColumns({ silent: false })}
                 className="ml-2 rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
               >
                 Retry
@@ -1193,18 +1524,33 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
                   <label className="mb-1 block text-gray-600">
                     Dependent columns{requiresYColumnsValue ? ' *' : ''}
                   </label>
-                  <select
-                    multiple
-                    value={selectedYColumns}
-                    onChange={(event) => handleMultiSelectChange(event, setSelectedYColumns)}
-                    className="w-full border border-gray-300 p-1"
-                    size={Math.min(8, Math.max(4, availableColumns.length))}
-                  >
-                    {availableColumns.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-[10px] text-gray-500">Use ⌘/Ctrl + click to select multiple columns.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableColumns.map(col => {
+                      const isSelected = selectedYColumns.includes(col);
+                      return (
+                        <button
+                          type="button"
+                          key={col}
+                          onClick={() =>
+                            setSelectedYColumns(prev =>
+                              prev.includes(col)
+                                ? prev.filter(item => item !== col)
+                                : [...prev, col]
+                            )
+                          }
+                          className={`rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-500 text-white shadow-sm'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                          aria-pressed={isSelected}
+                        >
+                          {col}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-500">Click to toggle columns. Selected values are highlighted.</p>
                 </div>
               )}
 
@@ -1213,18 +1559,33 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
                   <label className="mb-1 block text-gray-600">
                     Column set{requiresColumnsList ? ' *' : ''}
                   </label>
-                  <select
-                    multiple
-                    value={selectedColumnsList}
-                    onChange={(event) => handleMultiSelectChange(event, setSelectedColumnsList)}
-                    className="w-full border border-gray-300 p-1"
-                    size={Math.min(8, Math.max(4, availableColumns.length))}
-                  >
-                    {availableColumns.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-[10px] text-gray-500">Select the columns to include in this visualization.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableColumns.map(col => {
+                      const isSelected = selectedColumnsList.includes(col);
+                      return (
+                        <button
+                          type="button"
+                          key={col}
+                          onClick={() =>
+                            setSelectedColumnsList(prev =>
+                              prev.includes(col)
+                                ? prev.filter(item => item !== col)
+                                : [...prev, col]
+                            )
+                          }
+                          className={`rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-500 text-white shadow-sm'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                          aria-pressed={isSelected}
+                        >
+                          {col}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-500">Click to toggle which columns to include in this visualization.</p>
                 </div>
               )}
             </div>
@@ -1458,7 +1819,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
 
         <div className="mb-4">
           <button
-            onClick={generateGraph}
+            onClick={() => void generateGraph()}
             disabled={generateDisabled}
             className={`w-full px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
               generateDisabled
@@ -1482,7 +1843,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate, on
             <div className="font-medium">Something went wrong</div>
             <p className="mt-1 text-[11px]">{error}</p>
             <button
-              onClick={generateGraph}
+              onClick={() => void generateGraph()}
               className="mt-2 rounded border border-red-300 px-2 py-1 text-[11px] font-medium text-red-600 hover:bg-red-100"
             >
               Try again

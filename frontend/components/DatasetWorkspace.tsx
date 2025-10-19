@@ -110,7 +110,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
 
   const loadAllDatasets = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/datasets?limit=1000`);
+      const res = await fetch(`${BACKEND_URL}/datasets?limit=1000`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setAllDatasets(data.datasets);
@@ -120,19 +120,28 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
     }
   };
 
+  const refreshDatasetInfo = async () => {
+    if (!currentDatasetId) return null;
+
+    const datasetRes = await fetch(`${BACKEND_URL}/dataset/${currentDatasetId}`, { cache: 'no-store' });
+    if (!datasetRes.ok) {
+      throw new Error('Failed to load dataset');
+    }
+
+    const dataset = await datasetRes.json();
+    setCurrentDataset(dataset);
+    return dataset;
+  };
+
   const loadWorkspaceData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Load current dataset info
-      const datasetRes = await fetch(`${BACKEND_URL}/dataset/${currentDatasetId}`);
-      if (!datasetRes.ok) throw new Error('Failed to load dataset');
-      const dataset = await datasetRes.json();
-      setCurrentDataset(dataset);
+      await refreshDatasetInfo();
 
-      // Load related datasets (datasets created from this one or vice versa)
-      const relatedRes = await fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/related`);
+    // Load related datasets (datasets created from this one or vice versa)
+    const relatedRes = await fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/related`, { cache: 'no-store' });
       if (relatedRes.ok) {
         const related = await relatedRes.json();
         setRelatedDatasets(related);
@@ -151,8 +160,8 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
   const loadPreview = async () => {
     try {
       const [previewRes, metadataRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/preview?limit=${limit}&offset=${offset}`),
-        fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/metadata`)
+        fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/preview?limit=${limit}&offset=${offset}`, { cache: 'no-store' }),
+        fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/metadata`, { cache: 'no-store' })
       ]);
       
       if (!previewRes.ok) throw new Error('Failed to load preview');
@@ -211,6 +220,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
         });
       }
       await refreshPreview();
+      emitDatasetUpdated('workspace');
       setOpMessage(`CHANGES SAVED: ${edits.length} VALUE EDIT(S)${renames && renames.length ? ` + ${renames.length} RENAME(S)` : ''}`);
     } catch (e: any) {
       setOpMessage(`Save failed: ${e.message}`);
@@ -220,6 +230,20 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
   const refreshPreview = () => {
     loadPreview();
   };
+
+  const emitDatasetUpdated = useCallback((source: string = 'workspace') => {
+    if (!currentDatasetId || typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('dataset-updated', {
+        detail: { datasetId: currentDatasetId, source }
+      }));
+    } catch (error) {
+      console.error('Failed to dispatch dataset update event:', error);
+    }
+  }, [currentDatasetId]);
 
   const applyGlobalRounding = async (decimalsOverride?: string) => {
     if (!report || !report.dtype_inference) return;
@@ -240,6 +264,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
         body: JSON.stringify({ rounds }) 
       });
       await refreshPreview();
+      emitDatasetUpdated('workspace');
       setOpMessage(`Rounded to ${dec} decimals.`);
       fetchHistory();
     } catch (e: any) {
@@ -268,6 +293,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
       });
       setImputeSpecs({});
       await refreshPreview();
+      emitDatasetUpdated('workspace');
       setOpMessage(`FILLED MISSING VALUES IN ${imputations.length} COLUMN(S).`);
       fetchHistory();
     } catch (e: any) {
@@ -293,6 +319,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
         body: JSON.stringify({ imputations }) 
       });
       await refreshPreview();
+      emitDatasetUpdated('workspace');
       setOpMessage(`FILLED ${numericCols.length} NUMERIC COLUMN(S) USING MEAN.`);
       fetchHistory();
     } catch (e: any) {
@@ -326,6 +353,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
         body: JSON.stringify({ imputations }) 
       });
       await refreshPreview();
+      emitDatasetUpdated('workspace');
       setOpMessage(`APPLIED GLOBAL FILL '${strategy.toUpperCase()}' TO ${cols.length} COLUMN(S).`);
       fetchHistory();
     } catch (e: any) {
@@ -350,6 +378,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
       });
       if (!res.ok) throw new Error('Time format failed');
       await refreshPreview();
+      emitDatasetUpdated('workspace');
       setOpMessage(`FORMATTED ${cols.length} DATE/TIME COLUMN(S) AS ${timeFormat.toUpperCase()}.`);
       fetchHistory();
     } catch (e: any) {
@@ -362,7 +391,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
   const fetchHistory = async () => {
     if (!currentDatasetId) return;
     try {
-      const res = await fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/history?limit=200`);
+  const res = await fetch(`${BACKEND_URL}/dataset/${currentDatasetId}/history?limit=200`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setHistoryEvents(data.events || []);
@@ -371,6 +400,40 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
       console.error('Failed to fetch history:', e);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleDatasetUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ datasetId?: number | string; source?: string }>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+
+      const eventDatasetId = Number(detail.datasetId);
+      if (!Number.isFinite(eventDatasetId) || eventDatasetId !== currentDatasetId) {
+        return;
+      }
+
+      if (detail.source !== 'workspace') {
+        refreshPreview();
+      }
+
+      refreshDatasetInfo().catch((err) => {
+        console.error('Failed to refresh dataset info after update:', err);
+      });
+
+      if (showHistory) {
+        fetchHistory();
+      }
+
+      loadAllDatasets();
+    };
+
+    window.addEventListener('dataset-updated', handleDatasetUpdated as EventListener);
+    return () => window.removeEventListener('dataset-updated', handleDatasetUpdated as EventListener);
+  }, [currentDatasetId, showHistory]);
 
   const applyReprocess = async () => {
     if (!currentDatasetId) return;
@@ -391,6 +454,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
       });
       if (!res.ok) throw new Error('Reprocess failed');
       await refreshPreview();
+      emitDatasetUpdated('workspace');
       setOpMessage('REBUILT FROM ORIGINAL DATA WITH NEW SETTINGS.');
       fetchHistory();
     } catch (e: any) {
@@ -971,6 +1035,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
                               if(!res.ok) throw new Error('Revert failed');
                               setOpMessage(`REVERTED TO LOG #${ev.id}.`);
                               await refreshPreview();
+                              emitDatasetUpdated('workspace');
                               fetchHistory();
                             } catch(e: any) { 
                               setOpMessage('REVERT FAILED: ' + e.message); 
@@ -1017,6 +1082,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
                     if (result.dataset_id === currentDatasetId) {
                       // Data was merged into current dataset
                       refreshPreview();
+                      emitDatasetUpdated('workspace');
                       loadAllDatasets(); // Refresh dataset list
                     } else {
                       // New dataset was created (keep_separate)

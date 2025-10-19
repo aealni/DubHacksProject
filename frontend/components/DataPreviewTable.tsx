@@ -241,7 +241,7 @@ export const DataPreviewTable: React.FC<Props> = ({ rows, columns, maxRows = 200
       <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <div className="max-h-96 overflow-y-auto" onScroll={handleInnerScroll}>
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="table-auto min-w-max divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
                 <tr>
                   {/* Synthetic Row column */}
@@ -315,7 +315,7 @@ export const DataPreviewTable: React.FC<Props> = ({ rows, columns, maxRows = 200
                       </span>
                     </td>
                     {cols.map(c => (
-                      <td key={c} className="px-6 py-4 whitespace-nowrap max-w-xs">
+                      <td key={c} className="px-6 py-4 align-top">
                         {onSaveEdits ? (
                           <input
                             className={`w-full px-3 py-2 text-sm border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
@@ -332,7 +332,7 @@ export const DataPreviewTable: React.FC<Props> = ({ rows, columns, maxRows = 200
                             style={{ color: '#111827' }}
                           />
                         ) : (
-                          <span style={{ color: '#111827' }} className="text-sm truncate block">
+                          <span style={{ color: '#111827' }} className="text-sm block whitespace-pre-wrap break-words">
                             {r[c] === undefined || r[c] === null ? (
                               <span style={{ color: '#9ca3af' }} className="italic">-</span>
                             ) : (
