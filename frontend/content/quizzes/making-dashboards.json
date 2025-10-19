@@ -1,22 +1,79 @@
 [
   {
-    "question": "How can a dashboard guide readers from overview to detail?",
+    "question": "Which layout best guides executives from overview to detail?",
     "options": [
-      "Place summary insight panels before supporting evidence",
-      "Randomize widget positions on every load",
-      "Sort charts alphabetically by title"
+      "KPI scorecards on top, trend visuals in the middle, diagnostic tables at the bottom",
+      "Random chart ordering on every refresh",
+      "All raw tables first, then KPIs",
+      "Dense scatter plots in every quadrant"
     ],
     "answerIndex": 0,
-    "explanation": "Leading with summaries frames the story before deep-dives."
+    "explanation": "Leading with KPIs frames the story, and deeper visuals support the takeaway."
   },
   {
-    "question": "Why should dashboards reuse a consistent color palette and typography?",
+    "question": "You already show monthly revenue by region. What should you do before adding another revenue chart?",
     "options": [
-      "Consistency keeps attention on the data instead of styling differences",
-      "Matching colors automatically enforces access controls",
-      "Viewers expect each panel to look completely unique"
+      "Confirm the new chart delivers a different insight or consolidate the view",
+      "Duplicate the existing chart for symmetry",
+      "Hide the KPI tiles",
+      "Change palettes without reviewing content"
     ],
     "answerIndex": 0,
-    "explanation": "Familiar visuals reduce cognitive load so insights are easier to scan."
+    "explanation": "Dashboards should avoid redundancy; each tile must add new signal."
+  },
+  {
+    "question": "How can you highlight that SupportTickets fell below 1,200 in September on a dashboard?",
+    "options": [
+      "Add an annotation or reference band to the trend chart",
+      "Remove axis labels so the drop is surprising",
+      "Switch the chart to 3D",
+      "Export the data and delete the visual"
+    ],
+    "answerIndex": 0,
+    "explanation": "Annotations make the milestone explicit and tie it to the story."
+  },
+  {
+    "question": "Why reuse a consistent color palette and typography across panels?",
+    "options": [
+      "It reduces cognitive load and keeps focus on the insights",
+      "It automatically governs permissions",
+      "It forces every chart to look identical",
+      "It is required for export to CSV"
+    ],
+    "answerIndex": 0,
+    "explanation": "Consistency keeps attention on the message instead of theme changes."
+  },
+  {
+    "question": "When should you embed explanatory text or call-to-action notes?",
+    "options": [
+      "Whenever a viewer needs guidance on how to respond to the data",
+      "Only when the dashboard has fewer than three charts",
+      "Never—text distracts from visuals",
+      "Only after exporting to PDF"
+    ],
+    "answerIndex": 0,
+    "explanation": "Contextual notes help stakeholders turn observations into decisions."
+  },
+  {
+    "question": "How often should you schedule dashboard maintenance reviews?",
+    "options": [
+      "On a regular cadence (e.g., monthly or quarterly) to retire stale panels",
+      "Only when a stakeholder complains",
+      "Never—dashboards are static",
+      "Every day regardless of usage"
+    ],
+    "answerIndex": 0,
+    "explanation": "Routine reviews ensure data sources stay fresh and visuals remain relevant."
+  },
+  {
+    "question": "What is the best way to enable teams to explore details without cluttering the main view?",
+    "options": [
+      "Use filters, drill-down actions, or linked tabs rather than duplicating charts",
+      "Copy the entire dashboard for each persona",
+      "Hide all filters permanently",
+      "Add every possible field to every tooltip"
+    ],
+    "answerIndex": 0,
+    "explanation": "Interactive controls keep the primary story focused while offering depth on demand."
   }
 ]

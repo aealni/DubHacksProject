@@ -1,22 +1,68 @@
 [
   {
-    "question": "What should drive your choice of chart encodings?",
+    "question": "What is the first action you should take in Mango’s Graph Builder?",
     "options": [
-      "How you want viewers to compare values",
-      "The most vibrant palette in your toolkit",
-      "Whatever chart type comes first alphabetically"
+      "Select the dataset or saved query you want to visualize",
+      "Choose a random color palette",
+      "Export the chart before configuring it",
+      "Add annotations without choosing data"
     ],
     "answerIndex": 0,
-    "explanation": "Encodings are most effective when they reinforce the intended comparison."
+    "explanation": "Picking the dataset defines which fields are available for encodings."
   },
   {
-    "question": "Why prototype multiple chart types early in the design process?",
+    "question": "Using the EDA Operations Snapshot CSV, how would you encode Region when plotting Revenue by Month?",
     "options": [
-      "Different visuals can surface relationships that one chart alone might hide",
-      "Stakeholders expect every dataset to use at least five charts",
-      "Switching chart types automatically fixes data quality problems"
+      "Set Region as the Color by column",
+      "Place Region on the Y-axis",
+      "Convert Region to a size encoding",
+      "Drop Region and duplicate the chart"
     ],
     "answerIndex": 0,
-    "explanation": "Trying several views quickly reveals which framing best communicates the pattern."
+    "explanation": "The Color by column separates the two regions while sharing a common Independent (X) and Dependent (Y) axis."
+  },
+  {
+    "question": "Why should you prototype multiple chart types before publishing?",
+    "options": [
+      "Different visuals expose different stories and help you pick the clearest one",
+      "Stakeholders demand at least five chart options",
+      "Changing chart types automatically cleans the data",
+      "Prototype mode locks the dataset so others cannot edit"
+    ],
+    "answerIndex": 0,
+    "explanation": "Previewing alternative encodings ensures you choose the one that communicates the insight best."
+  },
+  {
+    "question": "You want to show how SupportTickets relates to SatisfactionScore. Which chart should you try first?",
+    "options": [
+      "Scatter plot with tooltips for Month and Region",
+      "Stacked area chart of SatisfactionScore",
+      "Donut chart of SupportTickets",
+      "Heatmap with no axes"
+    ],
+    "answerIndex": 0,
+    "explanation": "Scatter plots compare two quantitative measures and surface correlation quickly."
+  },
+  {
+    "question": "How can you highlight the South region’s March spike directly on the chart?",
+    "options": [
+      "Add an annotation or goal line at 88,000",
+      "Switch every bar to the same color",
+      "Remove axis labels",
+      "Export the chart without context"
+    ],
+    "answerIndex": 0,
+    "explanation": "Annotations draw attention to extraordinary points and document why they matter."
+  },
+  {
+    "question": "Where do you adjust number formatting for the Revenue axis?",
+    "options": [
+      "Axis settings within the Graph Builder",
+      "Dataset upload dialog",
+      "Theme toggle in the Layers panel",
+      "Export settings after publishing"
+    ],
+    "answerIndex": 0,
+    "explanation": "Axis settings let you select currency formats, decimal precision, and tick spacing."
   }
 ]

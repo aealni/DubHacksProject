@@ -1,22 +1,79 @@
 [
   {
-    "question": "What should you inspect first to avoid misreading a graph?",
+    "question": "When comparing North and South region sales for each month in the Interpreting Data Sample CSV, which chart communicates the differences most clearly?",
     "options": [
-      "Axes, units, and scale breaks",
-      "The thickness of the chart border",
-      "Whether labels use uppercase letters"
+      "Clustered column chart with one bar per region per month",
+      "Pie chart with one slice per month",
+      "Radar chart that mixes units and returns",
+      "Table with no color or emphasis"
     ],
     "answerIndex": 0,
-    "explanation": "Axes and scaling decisions heavily influence how changes appear."
+    "explanation": "A clustered column chart keeps the zero baseline, aligns categories, and highlights the South region spike in March."
   },
   {
-    "question": "How do annotations or confidence bands help interpret a chart?",
+    "question": "You want to show how South region returns change as sales increase. Which visual best uncovers this relationship?",
     "options": [
-      "They explain uncertainty and highlight context that might change your takeaway",
-      "They clutter the view with unnecessary shapes",
-      "They guarantee the numbers are statistically significant"
+      "Scatter plot of Sales vs. Returns with point labels",
+      "Stacked area chart of Sales and Returns",
+      "Horizontal bar chart sorted by Sales",
+      "Gauge chart with a single needle"
     ],
     "answerIndex": 0,
-    "explanation": "Context callouts keep you honest about the reliability of what you are seeing."
+    "explanation": "Scatter plots keep both metrics numeric, letting you see that higher sales in March come with higher returns."
+  },
+  {
+    "question": "Why must quantitative bar charts retain a zero baseline?",
+    "options": [
+      "The length of each bar encodes magnitude from zero",
+      "Viewers expect every chart to include zero by default",
+      "Legends no longer work without it",
+      "Axes cannot be resized in Mango"
+    ],
+    "answerIndex": 0,
+    "explanation": "Truncating the baseline distorts the perceived difference and can exaggerate tiny changes."
+  },
+  {
+    "question": "Which situation is a warning sign that a chart might mislead?",
+    "options": [
+      "Dual axes with different scales and no annotation",
+      "Descriptive title summarizing the key outcome",
+      "Color palette aligned to brand guidelines",
+      "Tooltips that surface raw values"
+    ],
+    "answerIndex": 0,
+    "explanation": "Unlabeled dual axes make it hard to compare series honestly and should be avoided or clearly explained."
+  },
+  {
+    "question": "Which month from the sample CSV deserves an annotation when plotted as a line chart?",
+    "options": [
+      "March, when South sales jump to 88,000",
+      "January, when both regions are equal",
+      "April, when returns disappear entirely",
+      "June, when the dataset has missing rows"
+    ],
+    "answerIndex": 0,
+    "explanation": "March’s festival surge is the biggest deviation from the baseline trend and should be called out."
+  },
+  {
+    "question": "How can you avoid over-encoding when building a scatter bubble chart?",
+    "options": [
+      "Limit the number of encoded dimensions to those that reinforce the message",
+      "Always add both size and color encodings even if they duplicate",
+      "Use 3D depth to impress viewers",
+      "Hide the legend to keep focus on the points"
+    ],
+    "answerIndex": 0,
+    "explanation": "Each encoding should add new information; redundant encodings overwhelm interpretation."
+  },
+  {
+    "question": "When might a stacked area chart backfire?",
+    "options": [
+      "When categories do not share the same baseline and viewers need to compare individual magnitudes",
+      "When you are showing cumulative totals",
+      "When you want to emphasize seasonality in a single series",
+      "When the audience expects to see composition over time"
+    ],
+    "answerIndex": 0,
+    "explanation": "Stacked areas hide individual trends unless viewers focus on the top layer; use them only when composition is the goal."
   }
 ]

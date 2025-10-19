@@ -1,22 +1,79 @@
 [
   {
-    "question": "Why should evaluation metrics align with business objectives?",
+    "question": "Which model in the evaluation summary shows the highest recall?",
     "options": [
-      "Different metrics highlight different failure modes that matter to the business",
-      "Accuracy alone always captures every risk",
-      "Alignment lets you skip fairness reviews"
+      "Deep Neural Net (0.91 recall)",
+      "Gradient Boosting (0.84 recall)",
+      "Baseline Logistic (0.88 recall)",
+      "All models share identical recall"
     ],
     "answerIndex": 0,
-    "explanation": "Choosing the right metric keeps focus on the outcomes that matter most."
+    "explanation": "The neural net retrieves the most positives with recall 0.91."
   },
   {
-    "question": "What does a confusion matrix help you uncover in classification models?",
+    "question": "If false positives are expensive, which model gives you the strongest precision?",
     "options": [
-      "Which classes are being mistaken for one another",
-      "How to automatically rebalance your dataset",
-      "Whether feature engineering is still required"
+      "Gradient Boosting with precision 0.85",
+      "Deep Neural Net with precision 0.83",
+      "Baseline Logistic with precision 0.79",
+      "Any model will do because precision is identical"
     ],
     "answerIndex": 0,
-    "explanation": "Breakdowns by predicted vs. actual class reveal the kinds of errors the model makes."
+    "explanation": "Gradient boosting balances performance and has the highest precision among the candidates."
+  },
+  {
+    "question": "Which evidence in the table suggests the neural net may be overfitting?",
+    "options": [
+      "Training loss (0.28) is far lower than validation loss (0.55)",
+      "Validation loss is lower than training loss",
+      "AUROC is below 0.50",
+      "Precision equals recall"
+    ],
+    "answerIndex": 0,
+    "explanation": "A wide gap between training and validation loss signals the model memorized the training set."
+  },
+  {
+    "question": "Which model offers the best balance of accuracy and generalization according to the summary?",
+    "options": [
+      "Gradient Boosting: accuracy 0.87 with the lowest validation loss (0.41)",
+      "Deep Neural Net: accuracy 0.90 with highest validation loss",
+      "Baseline Logistic: accuracy 0.70",
+      "None—they all overfit equally"
+    ],
+    "answerIndex": 0,
+    "explanation": "Gradient boosting pairs strong accuracy with a low validation loss, indicating reliable generalization."
+  },
+  {
+    "question": "Which metric should you highlight if stakeholders care about overall ranking quality across thresholds?",
+    "options": [
+      "AUROC",
+      "Training loss",
+      "Number of parameters",
+      "Epoch count"
+    ],
+    "answerIndex": 0,
+    "explanation": "AUROC captures the model’s ranking ability independent of any single decision threshold."
+  },
+  {
+    "question": "How would you explain the neural net’s F1 score of 0.87 to a non-technical stakeholder?",
+    "options": [
+      "It balances precision and recall into one number showing strong event detection",
+      "It guarantees zero false positives",
+      "It measures how long training took",
+      "It confirms the model is perfectly calibrated"
+    ],
+    "answerIndex": 0,
+    "explanation": "F1 is the harmonic mean of precision and recall, summarising event detection performance."
+  },
+  {
+    "question": "What next step should you recommend before shipping the neural net despite its high accuracy?",
+    "options": [
+      "Run additional validation or regularization to close the loss gap",
+      "Deploy immediately and skip monitoring",
+      "Discard the confusion matrix",
+      "Lower the training loss further"
+    ],
+    "answerIndex": 0,
+    "explanation": "The overfitting signal means you should regularize, gather more data, or adjust architecture before launch."
   }
 ]

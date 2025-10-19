@@ -1,0 +1,13 @@
+Month,Tickets,ResolvedWithinSLA,NPS,Escalations,Notes
+2024-01,1420,0.84,32,68,"New year backlog"
+2024-02,1395,0.85,33,64,"Staffing ramp"
+2024-03,1350,0.86,35,60,"Process refresh"
+2024-04,1320,0.87,36,58,""
+2024-05,1290,0.88,37,55,"Spring training"
+2024-06,1260,0.89,39,52,"Self-service launch"
+2024-07,1240,0.90,40,50,""
+2024-08,1210,0.91,41,47,"Promo overflow"
+2024-09,1180,0.92,42,45,""
+2024-10,1160,0.93,43,44,"Peak readiness"
+2024-11,1130,0.93,44,42,"Holiday pilot"
+2024-12,1110,0.94,45,40,"Year-end improvements"

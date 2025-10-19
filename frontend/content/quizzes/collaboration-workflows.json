@@ -1,22 +1,79 @@
 [
   {
-    "question": "Why attach comments directly to panels?",
+    "question": "Why share Mango workspace snapshots with your team?",
     "options": [
-      "They keep context with the data story for teammates",
-      "They replace the need for any other documentation",
-      "They prevent teammates from sharing feedback"
+      "They give everyone the same starting state with datasets, filters, and panels intact",
+      "They prevent teammates from making edits",
+      "They automatically email weekly reports",
+      "They replace the need for meeting notes"
     ],
     "answerIndex": 0,
-    "explanation": "Embedded comments preserve context alongside the analysis."
+    "explanation": "Snapshots ensure colleagues can reproduce your environment before contributing changes."
   },
   {
-    "question": "How do shared workspace snapshots help a project move faster?",
+    "question": "Where should you leave feedback on a draft chart?",
     "options": [
-      "They let teammates retrace steps and build from identical state",
-      "They replace the need for code review",
-      "They ensure only one person works on the analysis at a time"
+      "Inside the panel comment thread so the note sticks with the visual",
+      "In a private chat that others cannot see",
+      "On a separate spreadsheet with no links",
+      "Nowhere—feedback slows teams down"
     ],
     "answerIndex": 0,
-    "explanation": "Snapshots provide a reproducible baseline so collaboration stays in sync."
+    "explanation": "Panel comments keep discussion anchored to the artifact being reviewed."
+  },
+  {
+    "question": "How do changelogs or history notes accelerate onboarding?",
+    "options": [
+      "They document data cleaning steps and model iterations for new collaborators",
+      "They replace performance reviews",
+      "They are optional decoration",
+      "They hide mistakes"
+    ],
+    "answerIndex": 0,
+    "explanation": "Transparent histories reduce the time new teammates spend reverse-engineering past work."
+  },
+  {
+    "question": "What naming pattern helps teams stay organized?",
+    "options": [
+      "Include owner, purpose, and date (e.g., Support Forecast – v2 – Jul Review)",
+      "Use short cryptic IDs only",
+      "Rename panels every day",
+      "Leave titles blank so they auto-fill"
+    ],
+    "answerIndex": 0,
+    "explanation": "Descriptive titles make it obvious who owns the asset and when it was last updated."
+  },
+  {
+    "question": "How can you request targeted peer review inside Mango?",
+    "options": [
+      "@mention teammates in panel comments and link to supporting docs",
+      "Send a calendar invite with no context",
+      "Forward raw CSV files by email",
+      "Wait for someone to notice your work"
+    ],
+    "answerIndex": 0,
+    "explanation": "Mentions notify the right reviewers and keep context attached to the artifact."
+  },
+  {
+    "question": "Why schedule recurring collaboration rituals (standups, retrospectives)?",
+    "options": [
+      "They surface blockers early, align priorities, and celebrate progress",
+      "They eliminate the need for documentation",
+      "They guarantee overtime",
+      "They replace dashboards entirely"
+    ],
+    "answerIndex": 0,
+    "explanation": "Regular checkpoints keep the project moving and maintain shared accountability."
+  },
+  {
+    "question": "When should you archive or refresh panels in a shared workspace?",
+    "options": [
+      "During scheduled hygiene reviews or when insights become stale",
+      "Only when storage is full",
+      "Never—old panels might be useful someday",
+      "Whenever a new teammate joins"
+    ],
+    "answerIndex": 0,
+    "explanation": "Routine maintenance prevents outdated visuals from confusing stakeholders."
   }
 ]
