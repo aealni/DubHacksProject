@@ -443,6 +443,25 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     localStorage.removeItem(storageKey);
   }, [storageKey]);
 
+  const clearWorkspaceAndBackend = useCallback(() => {
+    (async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/admin/reset?full=true`, { method: 'POST' });
+        if (!response.ok) {
+          const details = await response.text().catch(() => '');
+          throw new Error(`Clear failed (${response.status}): ${details}`.trim());
+        }
+        setSelectedIds(new Set());
+        clearWorkspace();
+      } catch (error) {
+        console.error('[InfiniteCanvas] Failed to clear backend data', error);
+        if (typeof window !== 'undefined') {
+          window.alert('Unable to clear stored data. Check console for details.');
+        }
+      }
+    })();
+  }, [BACKEND_URL, clearWorkspace, setSelectedIds]);
+
   // Dataset chooser functions
   const fetchDatasets = async () => {
     setLoadingDatasets(true);
@@ -2857,10 +2876,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         <FeatureBar
           currentTool={currentTool}
           onChangeTool={(t) => setCurrentTool(t)}
-          onClearWorkspace={() => {
-            setSelectedIds(new Set());
-            clearWorkspace();
-          }}
+          onClearWorkspace={clearWorkspaceAndBackend}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
         />
