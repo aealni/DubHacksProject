@@ -2316,39 +2316,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       )}
 
       {/* Controls */}
-      <div className="absolute top-4 right-4 flex flex-col space-y-2">
-        <div className="flex space-x-2">
-          <button
-            onClick={() => dispatch({ type: 'SET_VIEWPORT', payload: { x: 0, y: 0, zoom: 1 } })}
-            className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm hover:bg-gray-50"
-            title="Reset viewport to center"
-          >
-            Reset View
-          </button>
-          <button
-            onClick={saveWorkspace}
-            className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm hover:bg-gray-50 text-blue-600"
-            title="Save current workspace"
-          >
-            Save
-          </button>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={loadWorkspace}
-            className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm hover:bg-gray-50 text-green-600"
-            title="Load saved workspace"
-          >
-            Load
-          </button>
-          <button
-            onClick={clearWorkspace}
-            className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm hover:bg-gray-50 text-red-600"
-            title="Clear all panels and reset workspace"
-          >
-            Clear
-          </button>
-        </div>
+      <div className="absolute top-4 right-4 pointer-events-auto">
+        <button
+          onClick={clearWorkspace}
+          className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm hover:bg-gray-50 text-red-600"
+          title="Clear all panels and reset workspace"
+        >
+          Clear
+        </button>
       </div>
 
       {/* Layers Panel */}
