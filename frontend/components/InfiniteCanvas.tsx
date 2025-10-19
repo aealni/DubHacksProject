@@ -81,6 +81,105 @@ interface GraphGenerationResult {
   };
 }
 
+  type PracticeDatasetQueueEntry = {
+    name: string;
+    csvContent: string;
+    savedAt: number;
+  };
+
+  const PRACTICE_DATASET_QUEUE_KEY = 'mango:education:pendingPracticeDatasets';
+  const MAX_PRACTICE_DATASET_QUEUE_LENGTH = 3;
+
+  const readPracticeDatasetQueue = (): PracticeDatasetQueueEntry[] => {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
+    try {
+      const rawQueue = window.sessionStorage.getItem(PRACTICE_DATASET_QUEUE_KEY);
+      if (!rawQueue) {
+        return [];
+      }
+
+      const parsedValue = JSON.parse(rawQueue);
+      const entries = Array.isArray(parsedValue) ? parsedValue : [];
+
+      return entries
+        .map((item) => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          const candidate = item as Record<string, unknown>;
+          const name = typeof candidate.name === 'string' ? candidate.name : null;
+          const csvContent = typeof candidate.csvContent === 'string' ? candidate.csvContent : null;
+          const savedAt = typeof candidate.savedAt === 'number' ? candidate.savedAt : Date.now();
+          if (!name || !csvContent) {
+            return null;
+          }
+          return { name, csvContent, savedAt };
+        })
+        .filter((entry): entry is PracticeDatasetQueueEntry => Boolean(entry))
+        .slice(0, MAX_PRACTICE_DATASET_QUEUE_LENGTH);
+    } catch (error) {
+      console.warn('[InfiniteCanvas] Unable to read practice dataset queue', error);
+      return [];
+    }
+  };
+
+  const writePracticeDatasetQueue = (entries: PracticeDatasetQueueEntry[]) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(
+        PRACTICE_DATASET_QUEUE_KEY,
+        JSON.stringify(entries.slice(0, MAX_PRACTICE_DATASET_QUEUE_LENGTH))
+      );
+    } catch (error) {
+      console.warn('[InfiniteCanvas] Unable to persist practice dataset queue', error);
+    }
+  };
+
+  const removePracticeDatasetQueueEntry = (name: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const queue = readPracticeDatasetQueue();
+      const filtered = queue.filter((entry) => entry.name !== name);
+      if (filtered.length === queue.length) {
+        return;
+      }
+      writePracticeDatasetQueue(filtered);
+    } catch (error) {
+      console.warn('[InfiniteCanvas] Unable to prune practice dataset queue', error);
+    }
+  };
+
+  const dispatchPendingPracticeDatasets = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const pending = readPracticeDatasetQueue();
+    if (!pending.length) {
+      return;
+    }
+
+    pending.forEach((entry) => {
+      window.dispatchEvent(
+        new CustomEvent('education-load-sample', {
+          detail: {
+            csvContent: entry.csvContent,
+            name: entry.name
+          }
+        })
+      );
+    });
+  };
+
 export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ 
   storageKey = 'infinite-canvas-workspace' 
 }) => {
@@ -343,6 +442,25 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     dispatch({ type: 'CLEAR_WORKSPACE' });
     localStorage.removeItem(storageKey);
   }, [storageKey]);
+
+  const clearWorkspaceAndBackend = useCallback(() => {
+    (async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/admin/reset?full=true`, { method: 'POST' });
+        if (!response.ok) {
+          const details = await response.text().catch(() => '');
+          throw new Error(`Clear failed (${response.status}): ${details}`.trim());
+        }
+        setSelectedIds(new Set());
+        clearWorkspace();
+      } catch (error) {
+        console.error('[InfiniteCanvas] Failed to clear backend data', error);
+        if (typeof window !== 'undefined') {
+          window.alert('Unable to clear stored data. Check console for details.');
+        }
+      }
+    })();
+  }, [BACKEND_URL, clearWorkspace, setSelectedIds]);
 
   // Dataset chooser functions
   const fetchDatasets = async () => {
@@ -1399,13 +1517,15 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         path?: string;
         name?: string;
         anchor?: { x: number; y: number };
+        csvContent?: string;
       }>;
 
       const detail = customEvent.detail || {};
       const datasetPath = detail.path;
+      const csvContent = typeof detail.csvContent === 'string' ? detail.csvContent : undefined;
 
-      if (!datasetPath) {
-        console.warn('[InfiniteCanvas] education-load-sample event missing path detail');
+      if (!datasetPath && !csvContent) {
+        console.warn('[InfiniteCanvas] education-load-sample event missing path or csvContent detail');
         return;
       }
 
@@ -1418,14 +1538,29 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
 
       (async () => {
         try {
-          const response = await fetch(datasetPath);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch sample dataset (${response.status})`);
+          let blob: Blob;
+          let inferredName = detail.name as string | undefined;
+
+          if (csvContent) {
+            const normalizedCsv = csvContent.endsWith('\n') ? csvContent : `${csvContent}\n`;
+            blob = new Blob([normalizedCsv], { type: 'text/csv' });
+            if (!inferredName) {
+              inferredName = 'personalized-practice-dataset.csv';
+            }
+          } else if (datasetPath) {
+            const response = await fetch(datasetPath);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch sample dataset (${response.status})`);
+            }
+
+            blob = await response.blob();
+            inferredName = inferredName || datasetPath.split('/').pop() || 'education-sample.csv';
+          } else {
+            throw new Error('No dataset source available for education load');
           }
 
-          const blob = await response.blob();
-          const inferredName = detail.name || datasetPath.split('/').pop() || 'education-sample.csv';
-          const file = new File([blob], inferredName, { type: blob.type || 'text/csv' });
+          const resolvedName = inferredName || 'education-sample.csv';
+          const file = new File([blob], resolvedName, { type: blob.type || 'text/csv' });
 
           const formData = new FormData();
           formData.append('file', file);
@@ -1455,7 +1590,13 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
           const result = await uploadResponse.json();
           const anchor = detail.anchor ?? getCanvasCenter();
           handleDatasetUploadSuccess(result, { anchor });
-          window.dispatchEvent(new CustomEvent('education-load-sample-success', { detail: { dataset: result } }));
+          removePracticeDatasetQueueEntry(resolvedName);
+          window.dispatchEvent(new CustomEvent('education-load-sample-success', {
+            detail: {
+              dataset: result,
+              sourceName: resolvedName
+            }
+          }));
         } catch (error) {
           console.error('[InfiniteCanvas] Unable to load education sample dataset', error);
           window.dispatchEvent(new CustomEvent('education-load-sample-error', {
@@ -1470,6 +1611,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     };
 
     window.addEventListener('education-load-sample', handleEducationLoad);
+    dispatchPendingPracticeDatasets();
     return () => window.removeEventListener('education-load-sample', handleEducationLoad);
   }, [BACKEND_URL, getCanvasCenter, handleDatasetUploadSuccess]);
 
@@ -2786,10 +2928,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         <FeatureBar
           currentTool={currentTool}
           onChangeTool={(t) => setCurrentTool(t)}
-          onClearWorkspace={() => {
-            setSelectedIds(new Set());
-            clearWorkspace();
-          }}
+          onClearWorkspace={clearWorkspaceAndBackend}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
         />

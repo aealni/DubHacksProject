@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Why attach comments directly to panels?",
+    "options": [
+      "They keep context with the data story for teammates",
+      "They replace the need for any other documentation",
+      "They prevent teammates from sharing feedback"
+    ],
+    "answerIndex": 0,
+    "explanation": "Embedded comments preserve context alongside the analysis."
+  },
+  {
+    "question": "How do shared workspace snapshots help a project move faster?",
+    "options": [
+      "They let teammates retrace steps and build from identical state",
+      "They replace the need for code review",
+      "They ensure only one person works on the analysis at a time"
+    ],
+    "answerIndex": 0,
+    "explanation": "Snapshots provide a reproducible baseline so collaboration stays in sync."
+  }
+]

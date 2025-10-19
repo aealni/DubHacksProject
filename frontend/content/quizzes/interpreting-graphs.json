@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What should you inspect first to avoid misreading a graph?",
+    "options": [
+      "Axes, units, and scale breaks",
+      "The thickness of the chart border",
+      "Whether labels use uppercase letters"
+    ],
+    "answerIndex": 0,
+    "explanation": "Axes and scaling decisions heavily influence how changes appear."
+  },
+  {
+    "question": "How do annotations or confidence bands help interpret a chart?",
+    "options": [
+      "They explain uncertainty and highlight context that might change your takeaway",
+      "They clutter the view with unnecessary shapes",
+      "They guarantee the numbers are statistically significant"
+    ],
+    "answerIndex": 0,
+    "explanation": "Context callouts keep you honest about the reliability of what you are seeing."
+  }
+]

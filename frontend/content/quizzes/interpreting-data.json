@@ -1,0 +1,46 @@
+[
+  {
+    "question": "In the sample CSV, what label appears in the Month column for the row that summarizes the entire sheet?",
+    "options": [
+      "Total",
+      "Summary",
+      "All Months",
+      "Average"
+    ],
+    "answerIndex": 0,
+    "explanation": "The summary row switches the Month column to \"Total\" and the Region column to \"All,\" signaling aggregation."
+  },
+  {
+    "question": "Why are February South Sales recorded as 0 in the sample spreadsheet?",
+    "options": [
+      "The launch was delayed, as noted in the Notes column",
+      "The worksheet filtered that row out of calculations",
+      "Sales were not tracked in February for any region",
+      "Values under 1 automatically round down to 0"
+    ],
+    "answerIndex": 0,
+    "explanation": "The Notes column states \"Launch delayed,\" which explains the zero values across Sales, Units, and Returns."
+  },
+  {
+    "question": "Which column in the sample CSV adds qualitative context about each row?",
+    "options": [
+      "Notes",
+      "Units",
+      "Region",
+      "Sales"
+    ],
+    "answerIndex": 0,
+    "explanation": "The Notes column stores comments such as \"Launch delayed\" that explain the numeric values."
+  },
+  {
+    "question": "In the sample CSV, which month and region combination has the highest sales value?",
+    "options": [
+      "March South",
+      "March North",
+      "January South",
+      "February North"
+    ],
+    "answerIndex": 0,
+    "explanation": "March South records 55,000 in sales, which is the highest figure in the table."
+  }
+]

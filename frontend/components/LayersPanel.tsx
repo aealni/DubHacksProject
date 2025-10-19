@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { Home, Lock, Unlock, Eye, EyeOff, Plus, X, GripVertical, GitMerge } from 'lucide-react';
 import { Panel, Folder } from '../utils/canvas/types';
 import ThemeToggle from './ThemeToggle';
@@ -45,7 +45,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onToggleCollapse,
   onPanelLockToggle
 }) => {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPanelId, setEditingPanelId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -315,15 +314,14 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           className={`absolute flex gap-2 transition-all duration-300 ${isCollapsed ? 'flex-col items-center' : 'items-center'}`}
           style={headerActionsStyle}
         >
-          <button
-            type="button"
-            onClick={() => router.push('/')}
+          <Link
+            href="/"
             className={smallIconBtn}
             title="Go to home"
             aria-label="Go to home"
           >
             <Home className="w-4 h-4" />
-          </button>
+          </Link>
           <ThemeToggle variant="panel" className={smallIconBtn} />
         </div>
       </div>

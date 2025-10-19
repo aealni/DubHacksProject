@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What keeps linked visualizations understandable for viewers?",
+    "options": [
+      "Coordinated selections with clear reset controls",
+      "Hiding filter states across all charts",
+      "Updating only one chart at a time"
+    ],
+    "answerIndex": 0,
+    "explanation": "Shared selections plus resets make cross-filtering transparent."
+  },
+  {
+    "question": "Why should interactive dashboards include a legend for highlighted subsets?",
+    "options": [
+      "It explains what the highlight represents across every linked view",
+      "It hides the fact that multiple filters are active",
+      "It removes the need for descriptive chart titles"
+    ],
+    "answerIndex": 0,
+    "explanation": "Clear legends show people exactly which slice of data is currently emphasized."
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "question": "While scanning the sample CSV for missing data, which field immediately signals follow-up?",
+    "options": [
+      "The blank Notes cell for January South",
+      "The Sales value of 49,000 in March North",
+      "The Units count of 200 in January South",
+      "The Returns total of 5 in March South"
+    ],
+    "answerIndex": 0,
+    "explanation": "A missing note is easy to overlook but affects how teammates interpret the row, so it should be documented."
+  },
+  {
+    "question": "Which pattern best fits the definition of an outlier in the Interpreting Data sample?",
+    "options": [
+      "February South dropping to zero across every metric",
+      "March North increasing by 5,000 in sales",
+      "January North having 180 units",
+      "Returns holding between 4 and 6 each month"
+    ],
+    "answerIndex": 0,
+    "explanation": "The across-the-board zero warrants investigation—it could be a true pause or missing data."
+  },
+  {
+    "question": "What makes the \"Total / All\" row a candidate for special handling during cleaning?",
+    "options": [
+      "It mixes aggregated labels with regular records",
+      "It contains negative numbers",
+      "It repeats the March North values",
+      "It is already filtered out by default"
+    ],
+    "answerIndex": 0,
+    "explanation": "Summary rows need tagging or relocation so analytics tools do not treat them as standard observations."
+  },
+  {
+    "question": "Why should cleaning steps be logged after you adjust the sample dataset?",
+    "options": [
+      "Documented changes help others trust and reproduce the analysis",
+      "Notes automatically delete rows with missing values",
+      "Logging steps cancels the need for validation",
+      "Documentation forces you to rebuild the dataset from scratch"
+    ],
+    "answerIndex": 0,
+    "explanation": "Sharing what changed—and why—keeps collaborators aligned and the dataset auditable."
+  },
+  {
+    "question": "You discover multiple blanks in the Notes column—what is the best next step before removing those rows?",
+    "options": [
+      "Review the surrounding context and confirm whether the information can be recovered",
+      "Delete the rows immediately so charts stay clean",
+      "Replace every blank with the word \"Unknown\" without checking the source",
+      "Ignore the blanks because the numeric columns are filled"
+    ],
+    "answerIndex": 0,
+    "explanation": "Investigating context first preserves useful records and helps decide whether to impute, annotate, or drop."
+  },
+  {
+    "question": "Within the Remove-Repair-Replace-Review workflow, which action is an example of the Replace step for the sample CSV?",
+    "options": [
+      "Converting any \"N/A\" strings in Notes to blank values before analysis",
+      "Dropping the February South row because it contains zeros",
+      "Duplicating the dataset tab to preserve the raw import",
+      "Averaging Sales across months to fill all empty cells"
+    ],
+    "answerIndex": 0,
+    "explanation": "Replace focuses on standardizing inconsistent text—turning placeholder strings like \"N/A\" into true blanks keeps filters and joins reliable."
+  }
+]

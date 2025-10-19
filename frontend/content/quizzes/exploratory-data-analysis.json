@@ -1,0 +1,79 @@
+[
+  {
+    "question": "When you summarize Revenue by region in the EDA Operations Snapshot CSV, what insight stands out?",
+    "options": [
+      "The Coast region jumps to 88,000 in March during the festival demand spike.",
+      "Central revenue never changes from month to month.",
+      "Both regions share an identical median revenue.",
+      "Revenue for the Coast region is missing every month."
+    ],
+    "answerIndex": 0,
+    "explanation": "The March Coast row reaches 88,000, a clear deviation from the surrounding months and a cue for deeper investigation."
+  },
+  {
+    "question": "What is the mean monthly Revenue for the Central region across the four months in the dataset?",
+    "options": [
+      "$61,750",
+      "$60,500",
+      "$63,250",
+      "$65,000"
+    ],
+    "answerIndex": 0,
+    "explanation": "Central revenue totals 247,000 across four months; dividing by four yields a mean of 61,750."
+  },
+  {
+    "question": "Treating the four Central SupportTickets counts as the full population, what variance do you calculate?",
+    "options": [
+      "1.25 tickets^2",
+      "0.75 tickets^2",
+      "2.50 tickets^2",
+      "4.00 tickets^2"
+    ],
+    "answerIndex": 0,
+  "explanation": "The counts deviate from the mean (12.5) by +/-1.5 and +/-0.5; squaring, summing (5.0), and dividing by four gives a population variance of 1.25 tickets^2."
+  },
+  {
+    "question": "What is the median SatisfactionScore for the Coast region?",
+    "options": [
+      "4.45",
+      "4.30",
+      "4.35",
+      "4.50"
+    ],
+    "answerIndex": 0,
+    "explanation": "Sorting the Coast scores (4.1, 4.4, 4.5, 4.6) and averaging the two middle values produces a median of 4.45."
+  },
+  {
+    "question": "What is the range of NewCustomers for the Coast region?",
+    "options": [
+      "42 customers",
+      "25 customers",
+      "18 customers",
+      "10 customers"
+    ],
+    "answerIndex": 0,
+    "explanation": "Coast new-customer counts span from 118 to 160, for a range of 42 customers."
+  },
+  {
+    "question": "Which visualization quickly reveals the festival surge in Coast revenue compared with Central?",
+    "options": [
+      "A line chart of monthly revenue split by region.",
+      "A pie chart of all ticket counts combined.",
+      "A static table with no highlighting.",
+      "A word cloud of the Notes column."
+    ],
+    "answerIndex": 0,
+    "explanation": "Line charts expose month-to-month swings, making the March spike easy to see alongside the steadier Central trend."
+  },
+  {
+    "question": "If you look for multi-month trends in SatisfactionScore, what do you notice?",
+    "options": [
+      "Both regions rise steadily across the four months, with Coast consistently higher.",
+      "Central drops every month while Coast stays flat.",
+      "Coast oscillates wildly between 3.0 and 5.0 each month.",
+      "Neither region changes at all from January to April."
+    ],
+    "answerIndex": 0,
+    "explanation": "Satisfaction climbs slightly for both regions, and Coast maintains a lead each month, signalling consistent service gains."
+  }
+]
