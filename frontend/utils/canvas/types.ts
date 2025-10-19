@@ -24,7 +24,7 @@ export interface PanelData {
 
 export interface Panel {
   id: string;
-  type: 'dataset' | 'graph' | 'graph-result' | 'model' | 'model-results' | 'model-visualization' | 'manipulation' | 'data-editor' | 'merge';
+  type: 'dataset' | 'graph' | 'graph-result' | 'model' | 'model-results' | 'model-visualization' | 'manipulation' | 'data-editor' | 'merge' | 'annotation-rect' | 'annotation-ellipse' | 'annotation-arrow' | 'annotation-text';
   x: number;
   y: number;
   width: number;

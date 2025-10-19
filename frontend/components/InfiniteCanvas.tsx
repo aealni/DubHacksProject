@@ -202,7 +202,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
   const marqueeRef = useRef<HTMLDivElement | null>(null);
-  const [currentTool, setCurrentTool] = useState<CanvasTool>('select');
+  const [currentTool, setCurrentTool] = useState<CanvasTool>('hand');
   const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
   const marqueeStart = useRef<{x:number;y:number}>();
   const pendingMarquee = useRef<{x:number;y:number}|null>(null);
@@ -224,6 +224,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
   // Suppress the next document click when we open the menu so the opening click
   // doesn't immediately bubble to the document handler and close the menu.
   const suppressNextDocumentClickRef = useRef(false);
+  const drawingAnnotationRef = useRef<{
+    panelId: string;
+    type: Exclude<CanvasTool, 'hand' | 'select' | 'text'>;
+    origin: { x: number; y: number };
+  } | null>(null);
   
   const [showChooser, setShowChooser] = useState(false);
   const [datasets, setDatasets] = useState<any[]>([]);
@@ -441,6 +446,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
   const clearWorkspace = useCallback(() => {
     dispatch({ type: 'CLEAR_WORKSPACE' });
     localStorage.removeItem(storageKey);
+    try {
+      useTabsStore.getState().resetTabs();
+    } catch (error) {
+      console.error('[InfiniteCanvas] Failed to reset tabs after clearing workspace', error);
+    }
   }, [storageKey]);
 
   const clearWorkspaceAndBackend = useCallback(() => {
@@ -789,6 +799,123 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     };
   }, [viewport]);
 
+  const ANNOTATION_STROKE = '#2563eb';
+  const ANNOTATION_FILL = 'rgba(37,99,235,0.12)';
+
+  const startAnnotationPanel = useCallback((tool: Exclude<CanvasTool, 'hand' | 'select' | 'text'>, start: { x: number; y: number }) => {
+    const id = `annotation-${tool}-${Date.now()}`;
+    const panelType: Panel['type'] =
+      tool === 'rect'
+        ? 'annotation-rect'
+        : tool === 'ellipse'
+          ? 'annotation-ellipse'
+          : 'annotation-arrow';
+
+    const baseName = tool === 'rect' ? 'Rectangle' : tool === 'ellipse' ? 'Ellipse' : 'Arrow';
+    const baseData: PanelData = {
+      annotationType: tool,
+      stroke: ANNOTATION_STROKE,
+      fill: tool === 'rect' || tool === 'ellipse' ? ANNOTATION_FILL : 'transparent'
+    };
+
+    if (tool === 'arrow') {
+      baseData.start = { x: 0, y: 0 };
+      baseData.end = { x: 1, y: 1 };
+    }
+
+    const newPanel: Panel = {
+      id,
+      type: panelType,
+      x: start.x,
+      y: start.y,
+      width: 1,
+      height: 1,
+      data: baseData,
+      customName: baseName
+    };
+
+    dispatch({ type: 'ADD_PANEL', payload: newPanel });
+    bringPanelToFront(id);
+    setSelectedIds(new Set([id]));
+    dispatch({ type: 'SET_SELECTED_PANEL', payload: id });
+    dispatch({ type: 'SET_HIGHLIGHTED_PANEL', payload: id });
+    pendingMarquee.current = null;
+    setIsMarqueeSelecting(false);
+    drawingAnnotationRef.current = { panelId: id, type: tool, origin: start };
+    return id;
+  }, [dispatch, bringPanelToFront, setSelectedIds, setIsMarqueeSelecting]);
+
+  const updateAnnotationPanel = useCallback((current: { x: number; y: number }) => {
+    const active = drawingAnnotationRef.current;
+    if (!active) return;
+    const panel = panelsRef.current.find(p => p.id === active.panelId);
+    if (!panel) return;
+
+    const { origin, type } = active;
+    const x = Math.min(origin.x, current.x);
+    const y = Math.min(origin.y, current.y);
+    const width = Math.max(1, Math.abs(current.x - origin.x));
+    const height = Math.max(1, Math.abs(current.y - origin.y));
+
+    const updates: Partial<Panel> = {
+      x,
+      y,
+      width,
+      height,
+      data: {
+        ...panel.data,
+        annotationType: type,
+        stroke: panel.data?.stroke ?? ANNOTATION_STROKE,
+        fill: panel.data?.fill ?? (type === 'rect' || type === 'ellipse' ? ANNOTATION_FILL : 'transparent')
+      }
+    };
+
+    if (type === 'arrow') {
+      updates.data = {
+        ...updates.data,
+        start: { x: origin.x - x, y: origin.y - y },
+        end: { x: current.x - x, y: current.y - y }
+      };
+    }
+
+    dispatch({ type: 'UPDATE_PANEL', payload: { id: panel.id, updates } });
+  }, [dispatch]);
+
+  const finalizeAnnotationPanel = useCallback(() => {
+    const active = drawingAnnotationRef.current;
+    if (!active) return;
+    const panel = panelsRef.current.find(p => p.id === active.panelId);
+    drawingAnnotationRef.current = null;
+    if (!panel) {
+      return;
+    }
+
+    const minSize = active.type === 'arrow' ? 12 : 10;
+    const tooSmall = panel.width < minSize && panel.height < minSize;
+    let remove = tooSmall;
+
+    if (!remove && panel.type === 'annotation-arrow') {
+      const start = panel.data?.start as { x: number; y: number } | undefined;
+      const end = panel.data?.end as { x: number; y: number } | undefined;
+      if (!start || !end) {
+        remove = true;
+      } else {
+        const length = Math.hypot(end.x - start.x, end.y - start.y);
+        remove = length < 12;
+      }
+    }
+
+    if (remove) {
+      dispatch({ type: 'REMOVE_PANEL', payload: panel.id });
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(panel.id);
+        return next;
+      });
+      dispatch({ type: 'SET_SELECTED_PANEL', payload: null });
+    }
+  }, [dispatch, setSelectedIds]);
+
   const getCanvasCenter = useCallback(() => {
     if (typeof window === 'undefined') {
       return { x: 0, y: 0 };
@@ -885,6 +1012,52 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       return;
     }
 
+    const isDrawingTool = currentTool === 'rect' || currentTool === 'ellipse' || currentTool === 'arrow';
+    const isTextTool = currentTool === 'text';
+
+    if (e.button === 0 && !isOverPanel && !isOverInteractiveElement) {
+      if (isDrawingTool) {
+        e.preventDefault();
+        e.stopPropagation();
+        const canvasPos = screenToCanvas(e.clientX, e.clientY);
+        startAnnotationPanel(currentTool as Exclude<CanvasTool, 'hand' | 'select' | 'text'>, canvasPos);
+        return;
+      }
+
+      if (isTextTool) {
+        e.preventDefault();
+        e.stopPropagation();
+        const canvasPos = screenToCanvas(e.clientX, e.clientY);
+        let entry = window.prompt('Add annotation text');
+        if (entry === null) {
+          return;
+        }
+        entry = entry.trim();
+        if (!entry) {
+          entry = 'New note';
+        }
+        const width = 240;
+        const height = 120;
+        const id = `annotation-text-${Date.now()}`;
+        const newPanel: Panel = {
+          id,
+          type: 'annotation-text',
+          x: canvasPos.x - width / 2,
+          y: canvasPos.y - height / 2,
+          width,
+          height,
+          data: { annotationType: 'text', text: entry, stroke: ANNOTATION_STROKE, fill: 'transparent' },
+          customName: 'Text note'
+        };
+        dispatch({ type: 'ADD_PANEL', payload: newPanel });
+        bringPanelToFront(id);
+        setSelectedIds(new Set([id]));
+        dispatch({ type: 'SET_SELECTED_PANEL', payload: id });
+        dispatch({ type: 'SET_HIGHLIGHTED_PANEL', payload: id });
+        return;
+      }
+    }
+
     if ((e.button === 0 && !isOverPanel && !isOverInteractiveElement) || isMiddleButton) {
       if (currentTool === 'hand' || isMiddleButton) {
         dispatch({
@@ -899,7 +1072,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         pendingMarquee.current = { x: e.clientX, y: e.clientY };
       }
     }
-  }, [viewport.x, viewport.y, draggedPanel, currentTool]);
+  }, [viewport.x, viewport.y, draggedPanel, currentTool, startAnnotationPanel, screenToCanvas, bringPanelToFront, dispatch, setSelectedIds]);
 
   // DEBUG: log global click handler activity
 
@@ -949,6 +1122,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       }
       latestMousePosRef.current = { x: ex, y: ey };
       return; // Do not process panning or panel drag when marqueeing
+    }
+
+    if (drawingAnnotationRef.current) {
+      e.preventDefault();
+      updateAnnotationPanel(screenToCanvas(e.clientX, e.clientY));
+      return;
     }
 
     if (isDragging && !draggedPanel) {
@@ -1080,7 +1259,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         }
       }
     }
-  }, [isDragging, dragStartPos, draggedPanel, isDragMode, dragStartTime, screenToCanvas, dragOffset, panels, viewport.zoom, isSnapping, state.snapTargetId, selectedIds, currentTool, isMarqueeSelecting]);
+  }, [isDragging, dragStartPos, draggedPanel, isDragMode, dragStartTime, screenToCanvas, dragOffset, panels, viewport.zoom, isSnapping, state.snapTargetId, selectedIds, currentTool, isMarqueeSelecting, updateAnnotationPanel]);
 
   // Handle mouse up
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
@@ -1090,6 +1269,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       groupDragFrame.current = null;
     }
     pendingGroupDelta.current = null;
+    finalizeAnnotationPanel();
     if (isMarqueeSelecting && marqueeStart.current && currentTool === 'select') {
       const endX = e.clientX;
       const endY = e.clientY;
@@ -1162,7 +1342,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     // Always stop dragging when mouse is released
     dispatch({ type: 'STOP_DRAGGING' });
     dispatch({ type: 'CLEAR_SNAPPING' });
-  }, [isSnapping, snapPreview, draggedPanel, dispatch, snapTargets, panels]);
+  }, [isSnapping, snapPreview, draggedPanel, dispatch, snapTargets, panels, finalizeAnnotationPanel, currentTool, isMarqueeSelecting, isDragMode, selectedIds]);
 
   // Handle right click for context menu
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -2248,7 +2428,15 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
           <div
             ref={canvasRef}
             className={`w-full h-full relative select-none transition-all duration-300 ease-out ${
-              draggedPanel ? 'cursor-grabbing' : isDragging ? 'cursor-grabbing' : 'cursor-move'
+              draggedPanel
+                ? 'cursor-grabbing'
+                : isDragging
+                  ? 'cursor-grabbing'
+                  : (currentTool === 'rect' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'text')
+                    ? 'cursor-crosshair'
+                    : currentTool === 'select'
+                      ? 'cursor-default'
+                      : 'cursor-move'
             }`}
             style={{
               marginLeft: isLayersPanelCollapsed ? '48px' : '320px'
@@ -2465,6 +2653,73 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                   </svg>
                 </button>
               </div>
+              {panel.type === 'annotation-rect' && (
+                <div
+                  className="panel-content w-full h-full rounded-md"
+                  style={{
+                    border: `2px solid ${panel.data?.stroke || ANNOTATION_STROKE}`,
+                    background: panel.data?.fill || ANNOTATION_FILL
+                  }}
+                />
+              )}
+              {panel.type === 'annotation-ellipse' && (
+                <div
+                  className="panel-content w-full h-full"
+                  style={{
+                    borderRadius: '9999px',
+                    border: `2px solid ${panel.data?.stroke || ANNOTATION_STROKE}`,
+                    background: panel.data?.fill || ANNOTATION_FILL
+                  }}
+                />
+              )}
+              {panel.type === 'annotation-arrow' && (
+                <div className="panel-content w-full h-full">
+                  <svg className="w-full h-full" viewBox={`0 0 ${Math.max(panel.width, 1)} ${Math.max(panel.height, 1)}`}>
+                    <defs>
+                      <marker id={`panel-arrow-${panel.id}`} markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+                        <path d="M0,0 L12,6 L0,12 z" fill={panel.data?.stroke || ANNOTATION_STROKE} />
+                      </marker>
+                    </defs>
+                    <line
+                      x1={(panel.data?.start?.x ?? 0)}
+                      y1={(panel.data?.start?.y ?? 0)}
+                      x2={(panel.data?.end?.x ?? panel.width)}
+                      y2={(panel.data?.end?.y ?? panel.height)}
+                      stroke={panel.data?.stroke || ANNOTATION_STROKE}
+                      strokeWidth={Math.max(2, Math.min(panel.width, panel.height) * 0.08)}
+                      strokeLinecap="round"
+                      markerEnd={`url(#panel-arrow-${panel.id})`}
+                    />
+                  </svg>
+                </div>
+              )}
+              {panel.type === 'annotation-text' && (
+                <div
+                  className="panel-content flex h-full w-full flex-col justify-center rounded-md border border-slate-300 bg-white/95 p-3 text-slate-800 shadow-sm"
+                  onDoubleClick={() => {
+                    const next = window.prompt('Edit annotation text', panel.data?.text || '');
+                    if (next !== null) {
+                      dispatch({
+                        type: 'UPDATE_PANEL',
+                        payload: {
+                          id: panel.id,
+                          updates: {
+                            data: {
+                              ...panel.data,
+                              annotationType: 'text',
+                              text: next.trim() || panel.data?.text || 'Note'
+                            }
+                          }
+                        }
+                      });
+                    }
+                  }}
+                >
+                  <p className="whitespace-pre-wrap text-sm leading-5">
+                    {panel.data?.text && panel.data.text.trim().length > 0 ? panel.data.text : 'Double-click to edit'}
+                  </p>
+                </div>
+              )}
               {panel.type === 'dataset' && (
                 <DatasetPanel
                   panel={panel}
@@ -2922,13 +3177,13 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         visiblePanels={visiblePanels}
         isCollapsed={isLayersPanelCollapsed}
         onToggleCollapse={handleLayersPanelToggle}
+        onClearWorkspace={clearWorkspaceAndBackend}
       />
       {/* Feature Bar */}
   <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[2000] pointer-events-none select-none">
         <FeatureBar
           currentTool={currentTool}
           onChangeTool={(t) => setCurrentTool(t)}
-          onClearWorkspace={clearWorkspaceAndBackend}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
         />

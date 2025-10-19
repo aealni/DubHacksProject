@@ -1,22 +1,79 @@
 [
   {
-    "question": "Which technique separates seasonal effects from overall change?",
+    "question": "In Mango’s Model Training panel, which Model Type should you choose first when estimating a straight-line change in Tickets over time?",
     "options": [
-      "Time-series decomposition",
-      "Randomly shuffling rows",
-      "Dropping all missing values without review"
+      "Linear Regression",
+      "Random Forest",
+      "K-Means Clustering",
+      "Naive Bayes"
     ],
     "answerIndex": 0,
-    "explanation": "Decomposition isolates trend, seasonality, and residual components."
+    "explanation": "Linear regression produces a slope and intercept that quantify the monthly trend."
   },
   {
-    "question": "What insight do rolling averages provide when monitoring a metric?",
+    "question": "Across the full year, Tickets fall from 1,420 in January to 1,110 in December. Approximately how many tickets does the trend lose per month?",
     "options": [
-      "They smooth short-term noise so you can spot directional shifts",
-      "They automatically predict future revenue",
-      "They eliminate the need for any anomaly investigation"
+      "About 28 tickets",
+      "About 12 tickets",
+      "About 60 tickets",
+      "About 150 tickets"
     ],
     "answerIndex": 0,
-    "explanation": "Windowed metrics reveal gradual movements that raw points can obscure."
+    "explanation": "The total drop is 310 tickets over 11 intervals, or roughly 28 tickets per month."
+  },
+  {
+    "question": "How many months show ResolvedWithinSLA at or above 0.90?",
+    "options": [
+      "Six months (July through December)",
+      "Three months (October through December)",
+      "All twelve months",
+      "Only January"
+    ],
+    "answerIndex": 0,
+    "explanation": "SLA meets or exceeds 0.90 from July onward, covering six months."
+  },
+  {
+    "question": "If you regress Tickets on month index, what slope sign do you expect?",
+    "options": [
+      "Negative, indicating a steady decline",
+      "Positive, indicating acceleration",
+      "Zero, indicating a flat line",
+      "Undefined, because regression cannot use monthly data"
+    ],
+    "answerIndex": 0,
+    "explanation": "Tickets decrease consistently, so the fitted slope should be negative."
+  },
+  {
+    "question": "Which intervention note should you annotate when explaining the mid-year SLA jump?",
+    "options": [
+      "Self-service launch in June",
+      "New year backlog in January",
+      "Promo overflow in August",
+      "Holiday pilot in November"
+    ],
+    "answerIndex": 0,
+    "explanation": "The self-service launch coincides with SLA improving from 0.88 to 0.89 and continuing upward."
+  },
+  {
+    "question": "What relationship would a scatter plot of Tickets (x-axis) versus NPS (y-axis) likely reveal?",
+    "options": [
+      "Negative correlation: as tickets fall, NPS rises",
+      "Positive correlation: both increase together",
+      "No discernible pattern",
+      "Cyclical swings every quarter"
+    ],
+    "answerIndex": 0,
+    "explanation": "Tickets trend down while NPS climbs, signaling a negative relationship."
+  },
+  {
+    "question": "Which subset would make a reasonable hold-out window for validating your trend forecast?",
+    "options": [
+      "The final quarter (October–December)",
+      "The first two months only",
+      "A random mix of early and late months",
+      "Every other month"
+    ],
+    "answerIndex": 0,
+    "explanation": "Holding out the most recent quarter tests whether the model generalizes to the latest behavior."
   }
 ]

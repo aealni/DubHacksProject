@@ -9,10 +9,8 @@ import exploratoryDataAnalysisQuizData from '../content/quizzes/exploratory-data
 import interpretingGraphsQuizData from '../content/quizzes/interpreting-graphs.json';
 import howToGraphDataQuizData from '../content/quizzes/how-to-graph-data.json';
 import trendAnalysisQuizData from '../content/quizzes/trend-analysis.json';
-import featureEngineeringQuizData from '../content/quizzes/feature-engineering.json';
 import modelEvaluationQuizData from '../content/quizzes/model-evaluation.json';
 import makingDashboardsQuizData from '../content/quizzes/making-dashboards.json';
-import connectingVisualizationsQuizData from '../content/quizzes/connecting-visualizations.json';
 import collaborationWorkflowsQuizData from '../content/quizzes/collaboration-workflows.json';
 
 interface EducationOverlayProps {
@@ -92,10 +90,8 @@ const TOPIC_TAGS: Record<string, string[]> = {
   '#interpreting-graphs': ['data-visualization', 'insight-communication', 'interpretation'],
   '#how-to-graph-data': ['chart-building', 'encoding-selection', 'comparisons'],
   '#trend-analysis': ['time-series', 'trend-detection', 'seasonality'],
-  '#feature-engineering': ['feature-engineering', 'derived-metrics', 'data-transformation'],
   '#model-evaluation': ['modeling', 'evaluation-metrics', 'performance-diagnostics'],
   '#making-dashboards': ['dashboards', 'layout-design', 'stakeholder-communication'],
-  '#connecting-visualizations': ['visual-integration', 'cross-filtering', 'storytelling'],
   '#collaboration-workflows': ['collaboration', 'handoff-process', 'version-practices']
 };
 
@@ -128,10 +124,8 @@ const lessonQuizzes: Record<string, QuizQuestion[]> = {
   '#interpreting-graphs': interpretingGraphsQuizData as QuizQuestion[],
   '#how-to-graph-data': howToGraphDataQuizData as QuizQuestion[],
   '#trend-analysis': trendAnalysisQuizData as QuizQuestion[],
-  '#feature-engineering': featureEngineeringQuizData as QuizQuestion[],
   '#model-evaluation': modelEvaluationQuizData as QuizQuestion[],
   '#making-dashboards': makingDashboardsQuizData as QuizQuestion[],
-  '#connecting-visualizations': connectingVisualizationsQuizData as QuizQuestion[],
   '#collaboration-workflows': collaborationWorkflowsQuizData as QuizQuestion[]
 };
 
@@ -555,12 +549,70 @@ const topics: Topic[] = [
     quiz: lessonQuizzes['#exploratory-data-analysis']
   },
   {
-    title: 'Interpreting Graphs',
-    description: 'Read scales, distributions, and context clues to avoid misinterpretation.',
+    title: 'Types of Graphs',
+    description: 'Match business questions to chart families and assess when a visual might mislead.',
     anchor: '#interpreting-graphs',
     detail: [
-      'Always note the axes, units, and scale breaks. A truncated y-axis can make minor changes feel dramatic unless you check the full range.',
-      'Look for annotations or confidence bands that explain uncertainty. Missing context often signals that more exploration is needed before drawing conclusions.'
+      `<h4 class="text-lg font-semibold text-blue-200">Start with the question</h4>
+<p class="mt-2 text-sm text-slate-200">Different charts spotlight different comparisons. Before plotting, ask whether you are comparing categories, tracking a trend, viewing composition, or testing relationships. What follows is just a small subset of all possible graphs. Stay curious, and keep experimenting to find the best way to visualize your data!</p>
+<p class="mt-3 text-sm text-slate-200"><a class="text-blue-300 underline" href="#" data-education-load-path="/education/interpreting-data-sample.csv" data-education-dataset-name="Interpreting Data Sample.csv">Load the sample spreadsheet</a> and note how <em>Sales</em>, <em>Units</em>, and <em>Returns</em> lend themselves to distinct visuals.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key prompt: What decision should this chart unlock?</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Bar and column charts</h4>
+<p class="mt-2 text-sm text-slate-200">Use bars when comparing discrete categories or when the baseline of zero matters. In the sample CSV, compare <em>Sales</em> by region to show magnitude differences quickly.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Clustered bars reveal side-by-side comparisons (North vs. South).</li>
+  <li>Stacked bars emphasize composition, but keep totals consistent to avoid distortion.</li>
+  <li>Always start quantitative axes at zero so length encodes value faithfully.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Bars are for magnitude comparisons, not for trends across dense time scales.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Lines and area charts</h4>
+<p class="mt-2 text-sm text-slate-200">Lines connect ordered points to show motion. Plot monthly <em>Sales</em> with a line when you want to highlight direction and rate of change.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Highlight turning points with annotations so the story is clear at a glance.</li>
+  <li>Use shaded ranges or secondary lines to show forecasts or confidence intervals.</li>
+  <li>Reserve area charts for cumulative totals or when stacking partitions of a whole.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Lines emphasise direction; add context when scales start above zero.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Relationship charts</h4>
+<p class="mt-2 text-sm text-slate-200">Scatter and bubble charts uncover relationships between two or three quantitative metrics. Pair <em>Sales</em> (x-axis) with <em>Returns</em> (y-axis) and size bubbles by <em>Units</em> to explore quality concerns.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Add trend lines or correlation callouts to reinforce the takeaway.</li>
+  <li>Limit dimensions: too many encodings overwhelm interpretation.</li>
+  <li>Label noteworthy outliers directly rather than relying on legends.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Relationship charts succeed when the axes stay numeric and labels clarify the extremes.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Box plots surface spread and outliers</h4>
+<p class="mt-2 text-sm text-slate-200">Box-and-whisker charts summarize how values distribute. Use them when you want to explain variation in <em>Returns</em> by region without showing every record.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>The box captures the middle 50% (interquartile range) while whiskers show the spread.</li>
+  <li>Plot median lines and highlight individual points beyond the whiskers as potential anomalies.</li>
+  <li>Keep categories side-by-side to compare variability — wide boxes flag unstable performance.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Reach for box plots when stakeholders ask how consistent a metric is.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Pie and donut charts show composition</h4>
+<p class="mt-2 text-sm text-slate-200">Use pie or donut charts sparingly to illustrate parts of a whole. With the sample CSV, showcase the share of <em>Units</em> by region when there are only a few categories.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Limit slices to four or five segments so angle comparisons stay readable.</li>
+  <li>Sort the slices and label percentages directly to reduce legend scanning.</li>
+  <li>Choose contrasting colors and avoid 3D effects that distort perception.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Use pie charts only when composition is the headline insight.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Histograms reveal distribution shape</h4>
+<p class="mt-2 text-sm text-slate-200">Histograms aggregate continuous values into bins. Plot <em>Sales</em> or <em>Returns</em> to show whether data skews high, low, or clusters around a midpoint.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Pick bin widths that reflect meaningful ranges; too many bins add noise, too few hide detail.</li>
+  <li>Overlay a density curve or median marker when you need to guide interpretation.</li>
+  <li>Compare multiple histograms side-by-side to contrast distributions across segments.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Histograms answer questions about balance, skew, and tails.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Watch for misleading design choices</h4>
+<p class="mt-2 text-sm text-slate-200">Avoid 3D tilt, dual axes with mismatched scales, or truncated baselines unless you explicitly call out the change. When you inherit a chart, validate the encoding before trusting its message.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Check axis ranges and units.</li>
+  <li>Inspect legends and color encodings for consistency.</li>
+  <li>Confirm annotations match the underlying data point.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: A great chart is truthful, purposeful, and instantly legible.</p>`
     ],
     quiz: lessonQuizzes['#interpreting-graphs']
   },
@@ -569,8 +621,42 @@ const topics: Topic[] = [
     description: 'Choose chart types, map variables, and set encodings that reveal insight.',
     anchor: '#how-to-graph-data',
     detail: [
-      'Map each variable to an encoding (position, color, size) that matches how you want viewers to compare values. Avoid double-encoding unless it adds clarity.',
-      'Prototype multiple chart types quickly. A scatter might highlight correlation while a line chart clarifies evolution over time.'
+      `<h4 class="text-lg font-semibold text-blue-200">Load your dataset and open the Graph Builder</h4>
+<p class="mt-2 text-sm text-slate-200">Bring data into Mango first, then launch the Graph Builder from the <strong>Graphs</strong> tab or the canvas quick-actions.</p>
+<p class="mt-3 text-sm text-slate-200"><a class="text-blue-300 underline" href="#" data-education-load-path="/education/eda-operations-snapshot.csv" data-education-dataset-name="EDA Operations Snapshot.csv">Load the operations snapshot CSV</a>, then confirm the dataset name appears beneath the Graph type header before you begin mapping fields.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Always start with clean, named columns before charting.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Map fields to encodings intentionally</h4>
+<p class="mt-2 text-sm text-slate-200">Use the <strong>Inputs & columns</strong> panel to mirror the question you plan to answer:</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li><strong>Independent (X) column</strong> for the dimension the audience reads left to right (e.g., <em>Month</em>).</li>
+  <li><strong>Dependent (Y) column</strong> for the metric you want them to evaluate (e.g., <em>Revenue</em> or <em>NewCustomers</em>).</li>
+  <li><strong>Group by column</strong> to split clustered bars or multiple lines without duplicating charts (e.g., <em>Region</em>).</li>
+  <li><strong>Color by column</strong> when hue reinforces category comparisons in your story.</li>
+  <li><strong>Size by column</strong> to add a magnitude cue, such as <em>SupportTickets</em> in a scatter plot.</li>
+</ul>
+<p class="mt-3 text-sm text-slate-200">If an input does not clarify the comparison, leave it set to <em>None</em> so the chart stays focused.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Every mark on the chart must earn its place.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Prototype multiple chart types</h4>
+<p class="mt-2 text-sm text-slate-200">Use the <strong>Graph type</strong> dropdown or template picker to experiment with bars, lines, scatter plots, and more without rebuilding the query. Try each option to surface the visual that best highlights your key statistics and headline message.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Spot trends with a line chart split by region.</li>
+  <li>Use a clustered bar chart to compare total revenue per region.</li>
+  <li>Inspect relationships via scatter plots (Revenue vs. Returns) with tooltips.</li>
+  <li>Duplicate prototypes and iterate on encodings until the story is unmistakable.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Intentional experimentation uncovers the chart that communicates the story.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Refine styling and context</h4>
+<p class="mt-2 text-sm text-slate-200">Open the <strong>Presentation & styling</strong> panel to add finishing touches so viewers can better understand the results:</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Edit titles to answer a question (“Revenue climbs 15% in March”).</li>
+  <li>Format axes with consistent units and round meaningful increments.</li>
+  <li>Use annotations or goal lines to highlight thresholds stakeholders care about.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Clarity beats decoration.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Publish and keep iterating</h4>
+<p class="mt-2 text-sm text-slate-200">Click <strong>Generate Graph</strong> to render the chart, then save it to a graph panel, pin it into a dashboard, or export it when needed.</p>
+<p class="mt-3 text-sm text-slate-200">Revisit the builder whenever new data arrives—encodings that worked for four months of history may need to change once seasonality appears.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Graphs are living artifacts; treat them like products, not screenshots.</p>`
     ],
     quiz: lessonQuizzes['#how-to-graph-data']
   },
@@ -579,28 +665,78 @@ const topics: Topic[] = [
     description: 'Detect seasonality, correlation shifts, and meaningful changes over time.',
     anchor: '#trend-analysis',
     detail: [
-      'Decompose time series into trend, seasonal, and residual components to understand the forces driving change.',
-      'Use windowed statistics (rolling averages, rolling correlation) to observe structural breaks that merit deeper investigation.'
+      `<h4 class="text-lg font-semibold text-blue-200">Load a time-series dataset</h4>
+<p class="mt-2 text-sm text-slate-200">Trend work begins with regularly spaced observations. <a class="text-blue-300 underline" href="#" data-education-load-path="/education/contact-center-trend.csv" data-education-dataset-name="Contact Center Trend.csv">Load the contact center trend CSV</a> to track tickets, SLA performance, and satisfaction across twelve months.</p>
+<p class="mt-3 text-sm text-slate-200">Confirm timestamps are sorted and evenly spaced before running regressions so the slope you estimate reflects real time steps.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Clean temporal structure is prerequisite for regression-based trend modeling.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Configure a regression in Model Training</h4>
+<p class="mt-2 text-sm text-slate-200">Open the <strong>Model Training</strong> panel and select <strong>Linear Regression</strong> (or another regression family) under <strong>Model Type</strong>. Choose the metric you want to predict as the <strong>Target Column</strong> and toggle <strong>Auto-update</strong> if you want Mango to retrain whenever features change.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Select time-based inputs (Month index or lagged values) plus drivers like <em>Region</em> or <em>SatisfactionScore</em> from <strong>Feature Selection</strong>.</li>
+  <li>Use <strong>Select All</strong> or pick features intentionally to avoid multicollinearity.</li>
+  <li>Click <strong>Train Model & Create Visualization</strong> to generate the fitted line and supporting diagnostics.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Regression setup turns descriptive time-series questions into measurable predictions.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Interpret slope, fit, and residuals</h4>
+<p class="mt-2 text-sm text-slate-200">Review the regression output to understand how each feature influences the trend. Focus on coefficient signs, the intercept, and fit statistics before sharing results.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>A negative coefficient on the Month index signals the metric is declining each period; quantify the exact change per month.</li>
+  <li>Inspect residual charts to confirm no curvature remains—curved residuals suggest trying polynomial or piecewise regressions.</li>
+  <li>Validate with hold-out months or cross-validation when you forecast beyond the observed range.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Coefficients and residuals tell you whether the regression captures the story or needs refinement.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Probe seasonality and interventions</h4>
+<p class="mt-2 text-sm text-slate-200">Separate seasonal patterns from long-term change by extending the regression. Add dummy variables for months, insert interaction terms, or run STL decomposition when you suspect recurring peaks.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Compare coefficients on seasonal dummy variables to quantify holiday or promo lifts.</li>
+  <li>Use control charts alongside regression residuals to see whether SLA improvements stay within expected bounds.</li>
+  <li>Document intervention dates so you can add binary features that explain sudden slope changes.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Seasonality explains repeatable wiggles; note fields capture the why.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Communicate the story</h4>
+<p class="mt-2 text-sm text-slate-200">Summarize the signal, the drivers, and the next action. Pair trend lines with annotations, add forecast bands when appropriate, and call out when further investigation is required.</p>
+<p class="mt-3 text-sm text-slate-200">Link your findings back to dashboards or send snapshots so stakeholders can monitor whether the trend continues.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Trend analysis ends with a recommendation, not a chart.</p>`
     ],
     quiz: lessonQuizzes['#trend-analysis']
-  },
-  {
-    title: 'Feature Engineering',
-    description: 'Transform raw inputs into model-ready features.',
-    anchor: '#feature-engineering',
-    detail: [
-      'Generate interaction features deliberately. Multiplying or concatenating columns can capture non-linear patterns, but only keep what improves validation metrics.',
-      'Track feature provenance so you can reproduce training data later. Notebook snippets and pipeline code should align.'
-    ],
-    quiz: lessonQuizzes['#feature-engineering']
   },
   {
     title: 'Model Evaluation',
     description: 'Understand metrics, validation splits, and fairness checks.',
     anchor: '#model-evaluation',
     detail: [
-      'Align evaluation metrics with business objectives. Accuracy might look great even when recall is too low for critical alerts.',
-      'Inspect confusion matrices or residual plots per subgroup to flag fairness or calibration issues early.'
+      `<h4 class="text-lg font-semibold text-blue-200">Assemble evaluation evidence</h4>
+<p class="mt-2 text-sm text-slate-200">Gather predictions, labels, and summary metrics before judging a model. <a class="text-blue-300 underline" href="#" data-education-load-path="/education/model-evaluation-summary.csv" data-education-dataset-name="Model Evaluation Summary.csv">Load the model evaluation summary CSV</a> to compare baseline, gradient boosting, and neural-net runs.</p>
+<p class="mt-3 text-sm text-slate-200">Keep confusion matrices or regression residuals nearby so you can drill into errors when numbers look suspicious.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Evaluation is evidence collection, not a single metric.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Pick metrics that reflect impact</h4>
+<p class="mt-2 text-sm text-slate-200">Different outcomes require different scorecards. If missing a positive case is costly, center recall or sensitivity; if false alarms are expensive, elevate precision.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Use F1 to balance precision and recall when both matter.</li>
+  <li>Track AUROC for overall ranking quality.</li>
+  <li>Report calibration or lift charts when thresholds drive decisions.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Tie metrics to the business failure you refuse to accept.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Watch for overfitting and drift</h4>
+<p class="mt-2 text-sm text-slate-200">Compare training vs. validation loss and accuracy. In the sample CSV, the neural net posts 0.28 training loss but 0.55 validation loss — a red flag that it memorized noise.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Use cross-validation to average performance across folds.</li>
+  <li>Track metrics over time to catch drift in production.</li>
+  <li>Document hyperparameters so you can reproduce strong baselines.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Gaps between training and validation signal risk.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Slice performance for fairness</h4>
+<p class="mt-2 text-sm text-slate-200">Aggregate metrics can hide inequity. Break down results by cohort (region, segment, demographic) to ensure no group is underserved.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Compare false-negative rates per segment.</li>
+  <li>Identify thresholds that equalize opportunity.</li>
+  <li>Escalate to governance forums when gaps exceed policy.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Responsible evaluation is intersectional.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Decide and communicate next steps</h4>
+<p class="mt-2 text-sm text-slate-200">Summarize the recommendation: ship, retrain, or reject. Pair metrics with a plain-language narrative, highlight trade-offs, and outline remediation work.</p>
+<p class="mt-3 text-sm text-slate-200">Store evaluation artifacts in Mango’s notes or link them to collaboration threads so future iterations start from evidence, not guesswork.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Evaluation closes with actions and owners.</p>`
     ],
     quiz: lessonQuizzes['#model-evaluation']
   },
@@ -609,28 +745,83 @@ const topics: Topic[] = [
     description: 'Combine charts with narrative context for decision-ready stories.',
     anchor: '#making-dashboards',
     detail: [
-      'Arrange panels to guide readers from overview to detail. Start with a summary insight, then provide supporting evidence in adjacent panels.',
-      'Use consistent color palettes and typography across widgets so the dashboard feels cohesive and easy to scan.'
+  `<h4 class="text-lg font-semibold text-blue-200">Start with the narrative</h4>
+<p class="mt-2 text-sm text-slate-200">
+  A good dashboard reads like a story: each panel reveals a scene, and together they form a clear, cohesive message. 
+  Before choosing visuals, write the headline your audience should walk away with (“Support experience keeps improving while workload falls”). 
+</p>
+<p class="mt-3 text-sm text-slate-200">
+  Map every panel to a supporting point in that story. If a visual doesn’t serve the narrative, cut or revise it until each element advances understanding.
+</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: A dashboard is a narrative, not a collage of charts.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Design an intentionally sequenced layout</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Arrange panels in a logical flow—overview first, details second. Place top-level KPIs and summaries at the top, trends and comparisons in the middle, and deeper explorations or tables at the bottom.
+</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Reserve the left or top for the most important story beats.</li>
+  <li>Align related panels to guide the reader’s eye naturally.</li>
+  <li>Group filters and controls for clarity and keep plenty of white space for visual breathing room.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Layout reinforces how the story unfolds.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Eliminate redundancy</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Each chart should add a unique insight. Redundant visuals dilute focus and make dashboards harder to maintain. 
+  Instead of showing multiple variations of the same data, combine perspectives into a single, richer view.
+</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Merge overlapping charts by adding filters, tooltips, or highlights.</li>
+  <li>Use shared legends or multi-metric panels instead of separate, similar visuals.</li>
+  <li>Favor a single clear chart over many minor variations—one strong story beat per panel.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Simplicity strengthens comprehension.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Document your intent</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Good dashboards are as readable by teammates as they are by viewers. Use notes, comments, and captions to explain how metrics are calculated or why certain visuals were chosen. 
+</p>
+<p class="mt-3 text-sm text-slate-200">
+  Keep a short “dashboard guide” or embedded text box summarizing its purpose and main takeaways. 
+  This helps others extend or update it later without losing the original reasoning.
+</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Comments preserve clarity long after charts change.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Maintain and evolve the story</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Revisit dashboards periodically to confirm the story still holds. Remove obsolete metrics, refresh visuals with new data, and verify that each panel still contributes to the overall message.
+</p>
+<p class="mt-3 text-sm text-slate-200">
+  Record updates briefly in shared documentation or inline comments so others can trace why certain changes were made or insights re-framed.
+</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Dashboards evolve—keep the story coherent as the data grows.</p>
+`
     ],
     quiz: lessonQuizzes['#making-dashboards']
-  },
-  {
-    title: 'Connecting Visualizations',
-    description: 'Link charts so interactions reveal multi-dimensional relationships.',
-    anchor: '#connecting-visualizations',
-    detail: [
-      'Coordinate selections between charts using shared keys. Highlighted subsets in one view should update related visuals instantly.',
-      'Provide clear reset controls and legends so viewers always understand what filters are active across the connected experience.'
-    ],
-    quiz: lessonQuizzes['#connecting-visualizations']
   },
   {
     title: 'Collaboration Workflows',
     description: 'Share data stories and iterate on experiments.',
     anchor: '#collaboration-workflows',
     detail: [
-      'Share workspace snapshots or exported reports so teammates can retrace your steps and contribute new ideas.',
-      'Document decisions inside the platform. Comments attached to panels prevent context from being lost in chat threads.'
+  `<h4 class="text-lg font-semibold text-blue-200">Create shared starting points</h4>
+<p class="mt-2 text-sm text-slate-200">Use Mango snapshots or exported project bundles so teammates can reproduce your state in one click. Include dataset versions and notes about assumptions.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Reproducibility is collaboration’s foundation.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Comment where the work lives</h4>
+<p class="mt-2 text-sm text-slate-200">Add inline comments to graphs, datasets, or dashboard panels instead of scattering feedback across chat tools. Mention teammates and link to documentation when you request changes.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Context-rich feedback accelerates decisions.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Track cleaning and modeling steps</h4>
+<p class="mt-2 text-sm text-slate-200">Log transformations, filters, and model versions either in Mango’s history or a shared changelog. Future collaborators should be able to answer “What happened to this column?” without DMing you.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Audit trails reduce relearning.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Standardize naming and folders</h4>
+<p class="mt-2 text-sm text-slate-200">Adopt conventions for datasets, panels, and scenarios—identify owner, purpose, and freshness date in the title (e.g., “Support Forecast – v2 – Jul Review”).</p>
+<p class="mt-3 text-sm text-slate-200">Organized folders help new contributors find their lane quickly.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Conventions scale teams.</p>`,
+  `<h4 class="text-lg font-semibold text-blue-200">Set collaboration rituals</h4>
+<p class="mt-2 text-sm text-slate-200">Schedule weekly syncs to review open questions, triage blockers, and celebrate shipped insights. Rotate note-taking and assign follow-ups right in Mango.</p>
+<p class="mt-3 text-sm text-slate-200">Close the loop by archiving obsolete panels and documenting learnings in your knowledge base.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Intentional cadence keeps projects moving.</p>`
     ],
     quiz: lessonQuizzes['#collaboration-workflows']
   }
@@ -2633,7 +2824,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                     {practiceQuizLoading ? (
                       <>
                         <p className="font-semibold text-blue-200">Generating a practice quiz…</p>
-                        <p className="text-xs text-slate-300">Hang tight while we craft a 5-10 question quiz grounded in a fresh dataset tailored to your progress.</p>
+                        <p className="text-xs text-slate-300">Hang tight while we craft a short quiz grounded in a fresh dataset tailored to your progress.</p>
                       </>
                     ) : practiceQuizErrorMessage ? (
                       <>
