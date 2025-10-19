@@ -1,0 +1,22 @@
+[
+  {
+    "question": "How can a dashboard guide readers from overview to detail?",
+    "options": [
+      "Place summary insight panels before supporting evidence",
+      "Randomize widget positions on every load",
+      "Sort charts alphabetically by title"
+    ],
+    "answerIndex": 0,
+    "explanation": "Leading with summaries frames the story before deep-dives."
+  },
+  {
+    "question": "Why should dashboards reuse a consistent color palette and typography?",
+    "options": [
+      "Consistency keeps attention on the data instead of styling differences",
+      "Matching colors automatically enforces access controls",
+      "Viewers expect each panel to look completely unique"
+    ],
+    "answerIndex": 0,
+    "explanation": "Familiar visuals reduce cognitive load so insights are easier to scan."
+  }
+]

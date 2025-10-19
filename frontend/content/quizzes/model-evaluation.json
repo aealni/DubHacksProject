@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Why should evaluation metrics align with business objectives?",
+    "options": [
+      "Different metrics highlight different failure modes that matter to the business",
+      "Accuracy alone always captures every risk",
+      "Alignment lets you skip fairness reviews"
+    ],
+    "answerIndex": 0,
+    "explanation": "Choosing the right metric keeps focus on the outcomes that matter most."
+  },
+  {
+    "question": "What does a confusion matrix help you uncover in classification models?",
+    "options": [
+      "Which classes are being mistaken for one another",
+      "How to automatically rebalance your dataset",
+      "Whether feature engineering is still required"
+    ],
+    "answerIndex": 0,
+    "explanation": "Breakdowns by predicted vs. actual class reveal the kinds of errors the model makes."
+  }
+]

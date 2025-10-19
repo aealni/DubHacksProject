@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Why is tracking feature provenance important?",
+    "options": [
+      "It ensures you can reproduce training data later",
+      "It allows you to ignore validation metrics entirely",
+      "It automatically reduces the total number of columns"
+    ],
+    "answerIndex": 0,
+    "explanation": "Documented provenance keeps feature creation reproducible."
+  },
+  {
+    "question": "How do validation experiments guide whether to keep a new feature?",
+    "options": [
+      "They show if the feature improves holdout performance without overfitting",
+      "They guarantee training accuracy reaches 100%",
+      "They let you skip monitoring models after deployment"
+    ],
+    "answerIndex": 0,
+    "explanation": "Evaluating features against real metrics ensures additions earn their place."
+  }
+]

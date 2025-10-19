@@ -3,6 +3,18 @@ import { Bookmark, BookmarkX, X as XIcon } from 'lucide-react';
 
 import { requestPersonalizedPracticeQuiz } from '../utils/ai/practiceQuiz';
 
+import interpretingDataQuizData from '../content/quizzes/interpreting-data.json';
+import dataCleaningBasicsQuizData from '../content/quizzes/data-cleaning-basics.json';
+import exploratoryDataAnalysisQuizData from '../content/quizzes/exploratory-data-analysis.json';
+import interpretingGraphsQuizData from '../content/quizzes/interpreting-graphs.json';
+import howToGraphDataQuizData from '../content/quizzes/how-to-graph-data.json';
+import trendAnalysisQuizData from '../content/quizzes/trend-analysis.json';
+import featureEngineeringQuizData from '../content/quizzes/feature-engineering.json';
+import modelEvaluationQuizData from '../content/quizzes/model-evaluation.json';
+import makingDashboardsQuizData from '../content/quizzes/making-dashboards.json';
+import connectingVisualizationsQuizData from '../content/quizzes/connecting-visualizations.json';
+import collaborationWorkflowsQuizData from '../content/quizzes/collaboration-workflows.json';
+
 interface EducationOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -107,6 +119,20 @@ const buildTagDictionaryForAnchors = (anchors: string[]): Record<string, string[
     }
   });
   return dictionary;
+};
+
+const lessonQuizzes: Record<string, QuizQuestion[]> = {
+  '#interpreting-data': interpretingDataQuizData as QuizQuestion[],
+  '#data-cleaning-basics': dataCleaningBasicsQuizData as QuizQuestion[],
+  '#exploratory-data-analysis': exploratoryDataAnalysisQuizData as QuizQuestion[],
+  '#interpreting-graphs': interpretingGraphsQuizData as QuizQuestion[],
+  '#how-to-graph-data': howToGraphDataQuizData as QuizQuestion[],
+  '#trend-analysis': trendAnalysisQuizData as QuizQuestion[],
+  '#feature-engineering': featureEngineeringQuizData as QuizQuestion[],
+  '#model-evaluation': modelEvaluationQuizData as QuizQuestion[],
+  '#making-dashboards': makingDashboardsQuizData as QuizQuestion[],
+  '#connecting-visualizations': connectingVisualizationsQuizData as QuizQuestion[],
+  '#collaboration-workflows': collaborationWorkflowsQuizData as QuizQuestion[]
 };
 
 type PracticeQuizPayload = Record<string, unknown>;
@@ -362,52 +388,7 @@ const topics: Topic[] = [
 </p>
        <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Recognize spreadsheets as a launchpad for deeper analysis and collaboration.</p>`
     ],
-    quiz: [
-      {
-        question: 'In the sample CSV, what label appears in the Month column for the row that summarizes the entire sheet?',
-        options: [
-          'Total',
-          'Summary',
-          'All Months',
-          'Average'
-        ],
-  answerIndex: 0,
-  explanation: 'The summary row switches the Month column to "Total" and the Region column to "All," signaling aggregation.'
-      },
-      {
-        question: 'Why are February South Sales recorded as 0 in the sample spreadsheet?',
-        options: [
-          'The launch was delayed, as noted in the Notes column',
-          'The worksheet filtered that row out of calculations',
-          'Sales were not tracked in February for any region',
-          'Values under 1 automatically round down to 0'
-        ],
-  answerIndex: 0,
-  explanation: 'The Notes column states "Launch delayed," which explains the zero values across Sales, Units, and Returns.'
-      },
-      {
-        question: 'Which column in the sample CSV adds qualitative context about each row?',
-        options: [
-          'Notes',
-          'Units',
-          'Region',
-          'Sales'
-        ],
-  answerIndex: 0,
-  explanation: 'The Notes column stores comments such as "Launch delayed" that explain the numeric values.'
-      },
-      {
-        question: 'In the sample CSV, which month and region combination has the highest sales value?',
-        options: [
-          'March South',
-          'March North',
-          'January South',
-          'February North'
-        ],
-  answerIndex: 0,
-  explanation: 'March South records 55,000 in sales, which is the highest figure in the table.'
-      }
-    ]
+    quiz: lessonQuizzes['#interpreting-data']
   },
   {
     title: 'Data Cleaning Basics',
@@ -479,10 +460,11 @@ const topics: Topic[] = [
       `<h4 class="text-lg font-semibold text-blue-200">Simple Cleaning Strategies</h4>
 <p class="mt-2 text-sm text-slate-200">Choose tactics deliberately and leave an audit trail.</p>
 <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
-  <li><strong>Remove:</strong> Drop empty or duplicate rows when they add no signal.</li>
-  <li><strong>Repair:</strong> Fill missing values with grouped medians, means, or generic placeholders (like 0).</li>
-  <li><strong>Replace:</strong> Normalize text (“N/A” → blank) so filters and joins behave.</li>
-  <li><strong>Review:</strong> Re-run summaries to confirm the meaning stayed intact.</li>
+  <li><strong>Remove:</strong> Drop empty or duplicate rows that do not add meaningful information.</li>
+  <li><strong>Repair:</strong> Fill missing values using appropriate strategies—grouped medians, means, or placeholders like 0—so calculations remain consistent.</li>
+  <li><strong>Replace:</strong> Standardize text or categorical entries (e.g., convert “N/A”, “None”, or “unknown” → blank) to ensure filters, joins, and comparisons work reliably.</li>
+  <li><strong>Normalize:</strong> Scale numeric columns or adjust formats so that different ranges, units, or styles do not distort analysis (e.g., dollars vs. thousands, date formats, capitalization).</li>
+  <li><strong>Review:</strong> Re-run summaries, totals, or quick charts to confirm that the data still reflects the intended meaning after cleaning.</li>
 </ul>
 <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Every cleaning step should be explainable and reversible.</p>`,
       `<h4 class="text-lg font-semibold text-blue-200">Try data cleaning yourself!</h4>
@@ -499,136 +481,78 @@ const topics: Topic[] = [
 
 <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Learning to see dirty data is the first step to cleaning it.</p>`
     ],
-    quiz: [
-      {
-        question: 'While scanning the sample CSV for missing data, which field immediately signals follow-up?',
-        options: [
-          'The blank Notes cell for January South',
-          'The Sales value of 49,000 in March North',
-          'The Units count of 200 in January South',
-          'The Returns total of 5 in March South'
-        ],
-        answerIndex: 0,
-        explanation: 'A missing note is easy to overlook but affects how teammates interpret the row, so it should be documented.'
-      },
-      {
-        question: 'Which pattern best fits the definition of an outlier in the Interpreting Data sample?',
-        options: [
-          'February South dropping to zero across every metric',
-          'March North increasing by 5,000 in sales',
-          'January North having 180 units',
-          'Returns holding between 4 and 6 each month'
-        ],
-        answerIndex: 0,
-        explanation: 'The across-the-board zero warrants investigation—it could be a true pause or missing data.'
-      },
-      {
-        question: 'What makes the “Total / All” row a candidate for special handling during cleaning?',
-        options: [
-          'It mixes aggregated labels with regular records',
-          'It contains negative numbers',
-          'It repeats the March North values',
-          'It is already filtered out by default'
-        ],
-        answerIndex: 0,
-        explanation: 'Summary rows need tagging or relocation so analytics tools do not treat them as standard observations.'
-      },
-      {
-        question: 'Why should cleaning steps be logged after you adjust the sample dataset?',
-        options: [
-          'Documented changes help others trust and reproduce the analysis',
-          'Notes automatically delete rows with missing values',
-          'Logging steps cancels the need for validation',
-          'Documentation forces you to rebuild the dataset from scratch'
-        ],
-        answerIndex: 0,
-        explanation: 'Sharing what changed—and why—keeps collaborators aligned and the dataset auditable.'
-      },
-      {
-        question: 'You discover multiple blanks in the Notes column—what is the best next step before removing those rows?',
-        options: [
-          'Review the surrounding context and confirm whether the information can be recovered',
-          'Delete the rows immediately so charts stay clean',
-          'Replace every blank with the word "Unknown" without checking the source',
-          'Ignore the blanks because the numeric columns are filled'
-        ],
-        answerIndex: 0,
-        explanation: 'Investigating context first preserves useful records and helps decide whether to impute, annotate, or drop.'
-      },
-      {
-        question: 'Within the Remove-Repair-Replace-Review workflow, which action is an example of the Replace step for the sample CSV?',
-        options: [
-          'Converting any "N/A" strings in Notes to blank values before analysis',
-          'Dropping the February South row because it contains zeros',
-          'Duplicating the dataset tab to preserve the raw import',
-          'Averaging Sales across months to fill all empty cells'
-        ],
-        answerIndex: 0,
-        explanation: 'Replace focuses on standardizing inconsistent text—turning placeholder strings like "N/A" into true blanks keeps filters and joins reliable.'
-      }
-    ]
-  },
-  {
-    title: 'Advanced Data Cleaning',
-    description: 'Use targeted imputations, normalization, and rule-based corrections.',
-    anchor: '#advanced-data-cleaning',
-    detail: [
-      'Match imputation strategies to feature semantics. Numerical fields might use grouped medians, while categorical fields benefit from most-frequent values per segment.',
-      'Layer deterministic rules (regex validation, range checks) ahead of statistical imputations so obvious data errors never get averaged into your model inputs.'
-    ],
-    quiz: [
-      {
-        question: 'Why should deterministic rules come before statistical imputations?',
-        options: [
-          'They prevent obvious errors from influencing averaged imputations',
-          'They make the pipeline intentionally slower',
-          'They allow you to skip documenting data changes'
-        ],
-        answerIndex: 0,
-        explanation: 'Cleaning with deterministic checks first keeps corrupt values out of downstream imputations.'
-      },
-      {
-        question: 'Which approach keeps numeric features comparable when they span different scales?',
-        options: [
-          'Applying normalization or standardization that matches feature semantics',
-          'Leaving raw magnitudes intact so larger numbers dominate models',
-          'Rounding every value to the nearest integer before training'
-        ],
-        answerIndex: 0,
-        explanation: 'Thoughtful scaling preserves relationships while preventing any feature from overpowering the rest.'
-      }
-    ]
+    quiz: lessonQuizzes['#data-cleaning-basics']
   },
   {
     title: 'Exploratory Data Analysis',
     description: 'Summaries, visual patterns, and statistical intuition.',
     anchor: '#exploratory-data-analysis',
     detail: [
-      'Pair quick aggregate tables with distribution plots. Seeing both the mean and the shape of the data keeps you from overlooking skew.',
-      'Iteratively slice data by key dimensions (time, geography, customer segment) to locate hidden variability that impacts downstream models.'
+      `<h4 class="text-lg font-semibold text-blue-200">Understanding Your Data</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Exploratory Data Analysis (EDA) is the practice of exploring datasets before formal modeling so you understand what story the numbers can actually support.
+</p>
+<p class="mt-3 text-sm text-slate-200">
+  <a class="text-blue-300 underline" href="#" data-education-load-path="/education/eda-operations-snapshot.csv" data-education-dataset-name="EDA Operations Snapshot.csv">
+    Load the sample CSV
+  </a> to compare Central and Coast region performance across revenue, new customers, support tickets, satisfaction scores, and operational notes.
+</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Spot trends, seasonality, and major swings before committing to a model.</li>
+  <li>Catch anomalies like March's festival surge or April's missing note so they do not distort downstream work.</li>
+  <li>Form hypotheses that can be tested with additional data, feature engineering, or statistical techniques.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Explore first so modeling time focuses on real signal.</p>
+`,
+`<h4 class="text-lg font-semibold text-blue-200">Numerical and Categorical Summaries</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Start with quick summaries: numeric columns (e.g., revenue, satisfaction) get means, medians, min/max, quartiles, and standard deviations; categorical columns (e.g., region, month) get counts, unique tallies, and frequency tables.
+</p>
+<p class="mt-3 text-sm text-slate-200"><strong>Example:</strong> Central region revenue has a median near 61,500 across four months, while Coast revenue spikes to 88,000 in March during festival demand.</p>
+<p class="mt-3 text-sm text-slate-200">Summaries highlight patterns and outliers quickly, guiding the rest of your EDA.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Seeing Data Visually</h4>
+<p class="mt-2 text-sm text-slate-200">Charts reveal patterns that tables alone may hide.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Line charts track revenue or satisfaction trends over time to make the March surge obvious.</li>
+  <li>Histograms show distributions for support tickets or new customers to highlight skew.</li>
+  <li>Scatter plots compare revenue vs. new customers to see relationships.</li>
+  <li>Heatmaps of correlations help spot variables that rise and fall together.</li>
+</ul>
+<p class="mt-3 text-sm text-slate-200">Visual inspection makes it easier to see outliers and clusters before quantifying them.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Going Beyond Simple Counts</h4>
+<p class="mt-2 text-sm text-slate-200">Once basic summaries are in hand, dig into variance, skewness, and correlations to understand how the dataset behaves.</p>
+<p class="mt-3 text-sm text-slate-200">Ask questions such as:</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Which metrics move together? Revenue and new customers often rise in the same months.</li>
+  <li>Are there seasonal or regional effects? Coast festival month differs from other months.</li>
+  <li>Do variance or skew values suggest transformations needed before modeling?</li>
+</ul>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Explore, Summarize, Refine</h4>
+<p class="mt-2 text-sm text-slate-200">EDA is iterative rather than one-and-done.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Summarize the data to capture where most values sit and where they break pattern.</li>
+  <li>Visualize patterns to confirm that tables match the story.</li>
+  <li>Spot anomalies, missing values, or stray notes and log follow-up questions.</li>
+  <li>Adjust filters, groupings, or cleaning rules and run another pass to deepen understanding.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Each iteration peels back another layer, revealing new insights worth validating.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Why EDA Matters</h4>
+<p class="mt-2 text-sm text-slate-200">Exploratory work pays off later in modeling, dashboarding, and storytelling.</p>
+<ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>Detect mistakes (like blank notes) before they leak into production analyses.</li>
+  <li>Generate hypotheses for deeper study — do festival campaigns always correlate with more support demand?</li>
+  <li>Decide which features, variables, or transformations deserve focus when building models.</li>
+  <li>Gain confidence that the dataset's quality and narrative are solid before sharing.</li>
+</ul>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Invest time in exploration so downstream decisions are data-driven and trustworthy.</p>
+`,
+      '<!-- Interactive practice placeholder -->'
     ],
-    quiz: [
-      {
-        question: 'What visual should accompany aggregate tables to avoid missing skew?',
-        options: [
-          'Distribution plots',
-          'A random color palette',
-          'A list of font sizes'
-        ],
-        answerIndex: 0,
-        explanation: 'Distributions paired with aggregates reveal hidden skew and shape.'
-      },
-      {
-        question: 'Why do analysts slice data by segments like time or geography?',
-        options: [
-          'To uncover variability that disappears in overall summaries',
-          'To inflate the number of charts in a presentation',
-          'To avoid comparing metrics between different cohorts'
-        ],
-        answerIndex: 0,
-        explanation: 'Segmenting surfaces differences that can change conclusions or next steps.'
-      }
-    ]
+    quiz: lessonQuizzes['#exploratory-data-analysis']
   },
   {
     title: 'Interpreting Graphs',
@@ -638,28 +562,7 @@ const topics: Topic[] = [
       'Always note the axes, units, and scale breaks. A truncated y-axis can make minor changes feel dramatic unless you check the full range.',
       'Look for annotations or confidence bands that explain uncertainty. Missing context often signals that more exploration is needed before drawing conclusions.'
     ],
-    quiz: [
-      {
-        question: 'What should you inspect first to avoid misreading a graph?',
-        options: [
-          'Axes, units, and scale breaks',
-          'The thickness of the chart border',
-          'Whether labels use uppercase letters'
-        ],
-        answerIndex: 0,
-        explanation: 'Axes and scaling decisions heavily influence how changes appear.'
-      },
-      {
-        question: 'How do annotations or confidence bands help interpret a chart?',
-        options: [
-          'They explain uncertainty and highlight context that might change your takeaway',
-          'They clutter the view with unnecessary shapes',
-          'They guarantee the numbers are statistically significant'
-        ],
-        answerIndex: 0,
-        explanation: 'Context callouts keep you honest about the reliability of what you are seeing.'
-      }
-    ]
+    quiz: lessonQuizzes['#interpreting-graphs']
   },
   {
     title: 'How to Graph Data',
@@ -669,28 +572,7 @@ const topics: Topic[] = [
       'Map each variable to an encoding (position, color, size) that matches how you want viewers to compare values. Avoid double-encoding unless it adds clarity.',
       'Prototype multiple chart types quickly. A scatter might highlight correlation while a line chart clarifies evolution over time.'
     ],
-    quiz: [
-      {
-        question: 'What should drive your choice of chart encodings?',
-        options: [
-          'How you want viewers to compare values',
-          'The most vibrant palette in your toolkit',
-          'Whatever chart type comes first alphabetically'
-        ],
-        answerIndex: 0,
-        explanation: 'Encodings are most effective when they reinforce the intended comparison.'
-      },
-      {
-        question: 'Why prototype multiple chart types early in the design process?',
-        options: [
-          'Different visuals can surface relationships that one chart alone might hide',
-          'Stakeholders expect every dataset to use at least five charts',
-          'Switching chart types automatically fixes data quality problems'
-        ],
-        answerIndex: 0,
-        explanation: 'Trying several views quickly reveals which framing best communicates the pattern.'
-      }
-    ]
+    quiz: lessonQuizzes['#how-to-graph-data']
   },
   {
     title: 'Trend Analysis',
@@ -700,28 +582,7 @@ const topics: Topic[] = [
       'Decompose time series into trend, seasonal, and residual components to understand the forces driving change.',
       'Use windowed statistics (rolling averages, rolling correlation) to observe structural breaks that merit deeper investigation.'
     ],
-    quiz: [
-      {
-        question: 'Which technique separates seasonal effects from overall change?',
-        options: [
-          'Time-series decomposition',
-          'Randomly shuffling rows',
-          'Dropping all missing values without review'
-        ],
-        answerIndex: 0,
-        explanation: 'Decomposition isolates trend, seasonality, and residual components.'
-      },
-      {
-        question: 'What insight do rolling averages provide when monitoring a metric?',
-        options: [
-          'They smooth short-term noise so you can spot directional shifts',
-          'They automatically predict future revenue',
-          'They eliminate the need for any anomaly investigation'
-        ],
-        answerIndex: 0,
-        explanation: 'Windowed metrics reveal gradual movements that raw points can obscure.'
-      }
-    ]
+    quiz: lessonQuizzes['#trend-analysis']
   },
   {
     title: 'Feature Engineering',
@@ -731,28 +592,7 @@ const topics: Topic[] = [
       'Generate interaction features deliberately. Multiplying or concatenating columns can capture non-linear patterns, but only keep what improves validation metrics.',
       'Track feature provenance so you can reproduce training data later. Notebook snippets and pipeline code should align.'
     ],
-    quiz: [
-      {
-        question: 'Why is tracking feature provenance important?',
-        options: [
-          'It ensures you can reproduce training data later',
-          'It allows you to ignore validation metrics entirely',
-          'It automatically reduces the total number of columns'
-        ],
-        answerIndex: 0,
-        explanation: 'Documented provenance keeps feature creation reproducible.'
-      },
-      {
-        question: 'How do validation experiments guide whether to keep a new feature?',
-        options: [
-          'They show if the feature improves holdout performance without overfitting',
-          'They guarantee training accuracy reaches 100%',
-          'They let you skip monitoring models after deployment'
-        ],
-        answerIndex: 0,
-        explanation: 'Evaluating features against real metrics ensures additions earn their place.'
-      }
-    ]
+    quiz: lessonQuizzes['#feature-engineering']
   },
   {
     title: 'Model Evaluation',
@@ -762,28 +602,7 @@ const topics: Topic[] = [
       'Align evaluation metrics with business objectives. Accuracy might look great even when recall is too low for critical alerts.',
       'Inspect confusion matrices or residual plots per subgroup to flag fairness or calibration issues early.'
     ],
-    quiz: [
-      {
-        question: 'Why should evaluation metrics align with business objectives?',
-        options: [
-          'Different metrics highlight different failure modes that matter to the business',
-          'Accuracy alone always captures every risk',
-          'Alignment lets you skip fairness reviews'
-        ],
-        answerIndex: 0,
-        explanation: 'Choosing the right metric keeps focus on the outcomes that matter most.'
-      },
-      {
-        question: 'What does a confusion matrix help you uncover in classification models?',
-        options: [
-          'Which classes are being mistaken for one another',
-          'How to automatically rebalance your dataset',
-          'Whether feature engineering is still required'
-        ],
-        answerIndex: 0,
-        explanation: 'Breakdowns by predicted vs. actual class reveal the kinds of errors the model makes.'
-      }
-    ]
+    quiz: lessonQuizzes['#model-evaluation']
   },
   {
     title: 'Making Dashboards',
@@ -793,28 +612,7 @@ const topics: Topic[] = [
       'Arrange panels to guide readers from overview to detail. Start with a summary insight, then provide supporting evidence in adjacent panels.',
       'Use consistent color palettes and typography across widgets so the dashboard feels cohesive and easy to scan.'
     ],
-    quiz: [
-      {
-        question: 'How can a dashboard guide readers from overview to detail?',
-        options: [
-          'Place summary insight panels before supporting evidence',
-          'Randomize widget positions on every load',
-          'Sort charts alphabetically by title'
-        ],
-        answerIndex: 0,
-        explanation: 'Leading with summaries frames the story before deep-dives.'
-      },
-      {
-        question: 'Why should dashboards reuse a consistent color palette and typography?',
-        options: [
-          'Consistency keeps attention on the data instead of styling differences',
-          'Matching colors automatically enforces access controls',
-          'Viewers expect each panel to look completely unique'
-        ],
-        answerIndex: 0,
-        explanation: 'Familiar visuals reduce cognitive load so insights are easier to scan.'
-      }
-    ]
+    quiz: lessonQuizzes['#making-dashboards']
   },
   {
     title: 'Connecting Visualizations',
@@ -824,28 +622,7 @@ const topics: Topic[] = [
       'Coordinate selections between charts using shared keys. Highlighted subsets in one view should update related visuals instantly.',
       'Provide clear reset controls and legends so viewers always understand what filters are active across the connected experience.'
     ],
-    quiz: [
-      {
-        question: 'What keeps linked visualizations understandable for viewers?',
-        options: [
-          'Coordinated selections with clear reset controls',
-          'Hiding filter states across all charts',
-          'Updating only one chart at a time'
-        ],
-        answerIndex: 0,
-        explanation: 'Shared selections plus resets make cross-filtering transparent.'
-      },
-      {
-        question: 'Why should interactive dashboards include a legend for highlighted subsets?',
-        options: [
-          'It explains what the highlight represents across every linked view',
-          'It hides the fact that multiple filters are active',
-          'It removes the need for descriptive chart titles'
-        ],
-        answerIndex: 0,
-        explanation: 'Clear legends show people exactly which slice of data is currently emphasized.'
-      }
-    ]
+    quiz: lessonQuizzes['#connecting-visualizations']
   },
   {
     title: 'Collaboration Workflows',
@@ -855,28 +632,7 @@ const topics: Topic[] = [
       'Share workspace snapshots or exported reports so teammates can retrace your steps and contribute new ideas.',
       'Document decisions inside the platform. Comments attached to panels prevent context from being lost in chat threads.'
     ],
-    quiz: [
-      {
-        question: 'Why attach comments directly to panels?',
-        options: [
-          'They keep context with the data story for teammates',
-          'They replace the need for any other documentation',
-          'They prevent teammates from sharing feedback'
-        ],
-        answerIndex: 0,
-        explanation: 'Embedded comments preserve context alongside the analysis.'
-      },
-      {
-        question: 'How do shared workspace snapshots help a project move faster?',
-        options: [
-          'They let teammates retrace steps and build from identical state',
-          'They replace the need for code review',
-          'They ensure only one person works on the analysis at a time'
-        ],
-        answerIndex: 0,
-        explanation: 'Snapshots provide a reproducible baseline so collaboration stays in sync.'
-      }
-    ]
+    quiz: lessonQuizzes['#collaboration-workflows']
   }
 ];
 
@@ -2845,6 +2601,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                                 : currentQuizQuestion.feedbackIncorrect ?? currentQuizQuestion.explanation ?? 'Take another look at the dataset and compare each option carefully.'}
                             </p>
                             {currentQuizQuestion.explanation &&
+                              (currentQuizQuestion.feedbackCorrect || currentQuizQuestion.feedbackIncorrect) &&
                               currentQuizQuestion.explanation !== currentQuizQuestion.feedbackCorrect &&
                               currentQuizQuestion.explanation !== currentQuizQuestion.feedbackIncorrect && (
                                 <p className="mt-2 text-[11px] text-slate-300">{currentQuizQuestion.explanation}</p>

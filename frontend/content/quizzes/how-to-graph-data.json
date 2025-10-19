@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What should drive your choice of chart encodings?",
+    "options": [
+      "How you want viewers to compare values",
+      "The most vibrant palette in your toolkit",
+      "Whatever chart type comes first alphabetically"
+    ],
+    "answerIndex": 0,
+    "explanation": "Encodings are most effective when they reinforce the intended comparison."
+  },
+  {
+    "question": "Why prototype multiple chart types early in the design process?",
+    "options": [
+      "Different visuals can surface relationships that one chart alone might hide",
+      "Stakeholders expect every dataset to use at least five charts",
+      "Switching chart types automatically fixes data quality problems"
+    ],
+    "answerIndex": 0,
+    "explanation": "Trying several views quickly reveals which framing best communicates the pattern."
+  }
+]

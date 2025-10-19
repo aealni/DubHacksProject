@@ -1,0 +1,9 @@
+Month,Region,Revenue,NewCustomers,SupportTickets,SatisfactionScore,Notes
+Jan,Central,60000,120,14,4.2,Campaign kickoff
+Jan,Coast,57000,130,17,4.5,Port expansion
+Feb,Central,62000,125,12,4.3,Partnership launch
+Feb,Coast,54000,118,20,4.1,Storm disruptions
+Mar,Central,61000,123,13,4.4,Upsell tests
+Mar,Coast,88000,160,18,4.6,Festival demand spike
+Apr,Central,64000,129,11,4.5,New staffing
+Apr,Coast,69000,142,15,4.4,
