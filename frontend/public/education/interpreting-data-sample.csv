@@ -1,0 +1,8 @@
+Month,Region,Sales,Units,Returns,Notes
+Jan,North,45000,180,5,Launch promo
+Jan,South,52000,200,6,
+Feb,North,47000,190,4,Late shipment
+Feb,South,0,0,0,Launch delayed
+Mar,North,49000,195,5,Format change
+Mar,South,55000,210,5,New reps onboarded
+Total,All,248000,975,25,Summary of reported months

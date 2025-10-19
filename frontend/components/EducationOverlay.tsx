@@ -42,33 +42,112 @@ type ResizeMode = 'both' | 'horizontal-left';
 
 const topics: Topic[] = [
   {
-    title: 'Interpreting CSV Files',
-    description: 'Spot column types, delimiters, and hidden quality issues.',
-    anchor: '#interpreting-csv-files',
+    title: 'Introduction to Spreadsheets',
+    description: 'How to read a spreadsheet and why we use them.',
+    anchor: '#interpreting-data',
     detail: [
-      'Inspect header rows for typos and duplicate column names. Many CSVs ship with inconsistent casing or trailing whitespace that can break column lookups.',
-      'Scan several sample rows to confirm delimiters stayed intact during export. Commas embedded inside quoted strings often create silent column shifts.'
+  `<h4 class="text-lg font-semibold text-blue-200">Introduction</h4>
+   <p class="mt-2 text-sm text-slate-200">This module walks through the core elements of a spreadsheet so you can explain what the data shows without touching a calculator.</p>
+   <p class="mt-3 text-sm text-slate-200"><a class="text-blue-300 underline" href="#" data-education-load-path="/education/interpreting-data-sample.csv" data-education-dataset-name="Interpreting Data Sample.csv">Load the sample CSV into Mango</a> to add it to your workspace instantly. It tracks monthly sales for the North and South regions plus a summary row.</p>
+   <p class="mt-3 text-sm text-slate-200">If you prefer to upload manually, right-click anywhere on the canvas (or tap the plus button in the bottom-right corner) and choose Upload Dataset.</p>
+   <p class="mt-3 text-sm text-slate-300">Keep the file visible while you read each page-we will reference the same rows throughout the lesson.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Understanding Spreadsheet Layout</h4>
+<p class="mt-3 text-sm text-slate-200"> Open the dataset’s tab from the bottom canvas bar, or tap the plus button in the lower-right corner and choose “Current Data.”</p>
+<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200">
+
+  <li>
+    <strong>Rows</strong> describe individual records — each one holds all the details for a single case or observation. 
+    For example, one row might represent a region’s results for a specific month.
+  </li>
+  <li>
+    <strong>Columns</strong> define categories or measures such as <em>Sales</em>, <em>Units</em>, or <em>Returns</em>. 
+    Each column tracks one type of information consistently down the page.
+  </li>
+  <li>
+    <strong>Headers</strong> in the first row act like labels on a map — they tell you what each column means and give you the words to describe your data accurately.
+  </li>
+  <li>
+    <strong>Context columns</strong> (like <em>Notes</em> or <em>Comments</em>) capture extra details that explain anomalies or special cases — for example, why a value might be zero or unusually high.
+  </li>
+  <li>
+    <strong>Summary rows</strong> often appear at the bottom to total or average key figures. 
+    These might use labels like <em>Total</em> or <em>All</em> to signal aggregation across the dataset. Other common labels include <em>Average</em>, <em>Subtotal</em>, or <em>Overall</em> — all summary statistics designed to give a quick overview of the data.
+  </li>
+</ul>
+
+       <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Goal: Describe what the spreadsheet is showing without performing calculations.</p>`,
+      `<h4 class="text-lg font-semibold text-blue-200">Why Use Spreadsheets?</h4>
+
+<p class="mt-2 text-sm text-slate-200">
+  Spreadsheets turn raw numbers into patterns you can <em>see</em> and questions you can <em>ask</em>.  
+  Let’s look at our sample table of <code>month</code>, <code>region</code>, <code>sales</code>, <code>units</code>, and <code>returns</code>.
+</p>
+
+<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200">
+  <li>
+    <strong>See structure instantly:</strong> Each column defines a category — months, regions, performance — so your data stays organized and comparable.
+  </li>
+  <li>
+    <strong>Spot patterns visually:</strong> Rows and columns make it easy to notice things like “South region drops to zero in February” or “March shows recovery.”
+  </li>
+  <li>
+    <strong>Ask better questions:</strong> How do returns compare across regions? Is sales growth consistent month to month? What drives outliers?
+  </li>
+  <li>
+    <strong>Connect to bigger tools:</strong> Clean spreadsheet data can feed directly into charts, dashboards, or analysis notebooks — no retyping required.
+  </li>
+</ul>
+
+<p class="mt-3 text-sm text-slate-200">
+  Behind every dashboard or model, there’s usually a spreadsheet that helped test the first idea.  
+  Learning to <strong>read and interpret</strong> tables like this builds the foundation for data analysis everywhere else.
+</p>
+       <p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Goal: Recognize spreadsheets as a launchpad for deeper analysis and collaboration.</p>`
     ],
     quiz: [
       {
-        question: 'Which quick check helps confirm delimiter integrity in a CSV export?',
+        question: 'In the sample CSV, what label appears in the Month column for the row that summarizes the entire sheet?',
         options: [
-          'Scanning a few sample rows to ensure commas remain inside quoted values',
-          'Relying on the file extension reported by the operating system',
-          'Counting how many characters appear in the header line'
+          'Total',
+          'Summary',
+          'All Months',
+          'Average'
         ],
-        answerIndex: 0,
-        explanation: 'Previewing sample rows surfaces delimiter issues immediately.'
+  answerIndex: 0,
+  explanation: 'The summary row switches the Month column to "Total" and the Region column to "All," signaling aggregation.'
       },
       {
-        question: 'Why should text fields be wrapped in quotes before exporting a CSV?',
+        question: 'Why are February South Sales recorded as 0 in the sample spreadsheet?',
         options: [
-          'So commas and line breaks inside values stay part of the field',
-          'To reduce overall file size',
-          'Because spreadsheet tools require double quotes for numbers'
+          'The launch was delayed, as noted in the Notes column',
+          'The worksheet filtered that row out of calculations',
+          'Sales were not tracked in February for any region',
+          'Values under 1 automatically round down to 0'
         ],
-        answerIndex: 0,
-        explanation: 'Quoting prevents delimiters and newlines from splitting the field.'
+  answerIndex: 0,
+  explanation: 'The Notes column states "Launch delayed," which explains the zero values across Sales, Units, and Returns.'
+      },
+      {
+        question: 'Which column in the sample CSV adds qualitative context about each row?',
+        options: [
+          'Notes',
+          'Units',
+          'Region',
+          'Sales'
+        ],
+  answerIndex: 0,
+  explanation: 'The Notes column stores comments such as "Launch delayed" that explain the numeric values.'
+      },
+      {
+        question: 'In the sample CSV, which month and region combination has the highest sales value?',
+        options: [
+          'March South',
+          'March North',
+          'January South',
+          'February North'
+        ],
+  answerIndex: 0,
+  explanation: 'March South records 55,000 in sales, which is the highest figure in the table.'
       }
     ]
   },
@@ -1206,6 +1285,40 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
       }, 0)
     : 0;
 
+  const handleDetailContentClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (!target) {
+      return;
+    }
+
+    const anchor = target.closest<HTMLAnchorElement>('a[data-education-load-path]');
+    if (!anchor) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const datasetPath = anchor.getAttribute('data-education-load-path');
+    if (!datasetPath) {
+      return;
+    }
+
+    const datasetName = anchor.getAttribute('data-education-dataset-name') || undefined;
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent('education-load-sample', {
+          detail: {
+            path: datasetPath,
+            name: datasetName
+          }
+        })
+      );
+    } catch (error) {
+      console.error('[EducationOverlay] Failed to dispatch sample dataset load request', error);
+    }
+  }, []);
+
   if (!isOpen && !selectedTopic) {
     return null;
   }
@@ -1233,8 +1346,8 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                 <p className="text-sm uppercase tracking-[0.4em] text-blue-300">Education Mode</p>
                 <h2 className="text-3xl font-semibold">Welcome to the Mango Learning Hub</h2>
                 <p className="text-sm text-slate-300">
-                  This guided overlay highlights topics to explore while you experiment inside the workspace. Use it as a
-                  quick reference or a starting point for a structured session.
+                  This guided overlay walks you through the foundations of data analysis using Mango. Explore topics,
+                  learn interactively, bookmark concepts, and test your knowledge with quizzes as you progress.
                 </p>
               </header>
               <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto">
@@ -1304,11 +1417,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                 <div className="border border-slate-700 bg-slate-900/60 p-6">
                   <h3 className="text-lg font-semibold text-blue-200">Concepts</h3>
                 <p className="mb-4 text-xs text-slate-400">
-                  Each section links to a concept you can explore. Future updates will include interactive walkthroughs and
-                  workspace checkpoints.
+                  Each section links to a concept you can explore. Mark topics as complete when you're done to track your progress.
                 </p>
                 {activeTopics.length === 0 ? (
-                  <p className="text-sm text-slate-400">You've completed every topic in this list. Great work!</p>
+                  <p className="text-sm text-slate-400">You've completed every topic in this list. Stay tuned for more!</p>
                 ) : (
                   <ul className="space-y-3">
                     {activeTopics.map((topic) => {
@@ -1476,9 +1588,15 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
           <div className="mt-4 flex-1 overflow-hidden">
             {detailTab === 'content' ? (
               <div className="flex h-full flex-col">
-                <div className="flex-1 overflow-y-auto no-scrollbar text-sm text-slate-200">
-                  {currentDetailContent ? (
-                    <p>{currentDetailContent}</p>
+                <div
+                  className="flex-1 overflow-y-auto no-scrollbar text-sm text-slate-200"
+                  onClick={handleDetailContentClick}
+                >
+                  {typeof currentDetailContent === 'string' ? (
+                    <div
+                      className="space-y-3 text-sm text-slate-200"
+                      dangerouslySetInnerHTML={{ __html: currentDetailContent }}
+                    />
                   ) : (
                     <p className="text-sm text-slate-400">Content coming soon.</p>
                   )}
