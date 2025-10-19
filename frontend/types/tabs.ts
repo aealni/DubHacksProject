@@ -67,6 +67,7 @@ export interface TabActions {
   switchToTabByIndex: (index: number) => void;
   createCanvasTab: () => string;
   closeActiveTab: (force?: boolean) => boolean;
+  resetTabs: () => void;
   
   // Persistence
   loadFromStorage: () => void;

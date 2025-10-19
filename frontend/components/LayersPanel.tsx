@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Home, Lock, Unlock, Eye, EyeOff, Plus, X, GripVertical, GitMerge } from 'lucide-react';
+import { Home, Lock, Unlock, Eye, EyeOff, Plus, X, GripVertical, GitMerge, Eraser } from 'lucide-react';
 import { Panel, Folder } from '../utils/canvas/types';
 import ThemeToggle from './ThemeToggle';
 
@@ -23,6 +23,7 @@ interface LayersPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onPanelLockToggle?: (panelId: string) => void;
+  onClearWorkspace: () => void;
 }
 
 export const LayersPanel: React.FC<LayersPanelProps> = ({
@@ -43,7 +44,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   visiblePanels,
   isCollapsed,
   onToggleCollapse,
-  onPanelLockToggle
+  onPanelLockToggle,
+  onClearWorkspace
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPanelId, setEditingPanelId] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   const draggedPanel = panels.find(p => p.id === draggedPanelId);
   const headerActionsStyle: React.CSSProperties = isCollapsed
     ? { top: 'calc(100% + 0.75rem)', left: '50%', transform: 'translateX(-50%)' }
-    : { top: '1rem', left: '1rem', transform: 'translateX(0)' };
+    : { top: '1rem', right: '1rem' };
 
   // Unified small icon button styling to match + / x visuals used across app
   const smallIconBtn = "inline-flex items-center justify-center h-7 w-7 rounded-md bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700";
@@ -106,6 +108,33 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         );
       case 'merge':
         return <GitMerge className="w-4 h-4" />;
+      case 'annotation-rect':
+        return (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+          </svg>
+        );
+      case 'annotation-ellipse':
+        return (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <ellipse cx="12" cy="12" rx="8" ry="6" />
+          </svg>
+        );
+      case 'annotation-arrow':
+        return (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="12" x2="18" y2="12" />
+            <polyline points="14 8 18 12 14 16" />
+          </svg>
+        );
+      case 'annotation-text':
+        return (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 7V5h16v2" />
+            <path d="M10 19h4" />
+            <path d="M12 5v14" />
+          </svg>
+        );
       default:
         return (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,6 +146,23 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 
   const getPanelName = (panel: Panel) => {
     if (panel.customName) return panel.customName;
+    switch (panel.type) {
+      case 'annotation-rect':
+        return 'Rectangle';
+      case 'annotation-ellipse':
+        return 'Ellipse';
+      case 'annotation-arrow':
+        return 'Arrow';
+      case 'annotation-text': {
+        const textValue = (panel.data?.text || '').toString().trim();
+        if (textValue.length === 0) {
+          return 'Text note';
+        }
+        return textValue.length > 32 ? `${textValue.slice(0, 32)}…` : textValue;
+      }
+      default:
+        break;
+    }
     if (panel.data?.name) return panel.data.name;
     if (panel.data?.original_filename) return panel.data.original_filename;
     if (panel.data?.datasetName) return panel.data.datasetName;
@@ -133,6 +179,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         return 'text-purple-600 bg-purple-50';
       case 'merge':
         return 'text-amber-600 bg-amber-50';
+      case 'annotation-rect':
+      case 'annotation-ellipse':
+        return 'text-sky-600 bg-sky-50';
+      case 'annotation-arrow':
+        return 'text-indigo-600 bg-indigo-50';
+      case 'annotation-text':
+        return 'text-rose-600 bg-rose-50';
       default:
         return 'text-gray-600 bg-gray-50';
     }
@@ -287,7 +340,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
       {/* Header */}
       <div
         className={`relative flex items-center border-b border-slate-200 bg-slate-50 transition-all duration-300 ${
-          isCollapsed ? 'p-3' : 'p-4 pl-14'
+          isCollapsed ? 'p-3' : 'p-4 pr-16'
         }`}
       >
         {!isCollapsed && (
@@ -303,7 +356,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         )}
         <button
           onClick={onToggleCollapse}
-          className="ml-auto p-1.5 rounded-md hover:bg-slate-200 transition-colors"
+          className={`ml-auto p-1.5 rounded-md hover:bg-slate-200 transition-colors ${!isCollapsed ? 'mr-12' : ''}`}
           title={isCollapsed ? "Expand layers panel" : "Collapse layers panel"}
         >
           <svg className={`w-4 h-4 text-slate-600 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -322,6 +375,15 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           >
             <Home className="w-4 h-4" />
           </Link>
+          <button
+            type="button"
+            onClick={onClearWorkspace}
+            className={smallIconBtn}
+            title="Clear workspace"
+            aria-label="Clear workspace"
+          >
+            <Eraser className="w-4 h-4" />
+          </button>
           <ThemeToggle variant="panel" className={smallIconBtn} />
         </div>
       </div>

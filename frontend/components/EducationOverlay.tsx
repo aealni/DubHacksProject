@@ -746,33 +746,57 @@ const topics: Topic[] = [
     anchor: '#making-dashboards',
     detail: [
   `<h4 class="text-lg font-semibold text-blue-200">Start with the narrative</h4>
-<p class="mt-2 text-sm text-slate-200">Clarify the core question your dashboard answers. Draft a headline (“Support experience keeps improving while workload falls”) before selecting visuals.</p>
-<p class="mt-3 text-sm text-slate-200">Map each widget to a supporting fact and flag anything that does not serve the story.</p>
-<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Story first, charts second.</p>`,
-  `<h4 class="text-lg font-semibold text-blue-200">Design an intentionally sequenced layout</h4>
-<p class="mt-2 text-sm text-slate-200">Place key metrics and KPIs at the top, trend visuals below, and exploratory tables last. Align related panels in rows so eyes flow naturally.</p>
+<p class="mt-2 text-sm text-slate-200">
+  A good dashboard reads like a story: each panel reveals a scene, and together they form a clear, cohesive message. 
+  Before choosing visuals, write the headline your audience should walk away with (“Support experience keeps improving while workload falls”). 
+</p>
+<p class="mt-3 text-sm text-slate-200">
+  Map every panel to a supporting point in that story. If a visual doesn’t serve the narrative, cut or revise it until each element advances understanding.
+</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: A dashboard is a narrative, not a collage of charts.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Design an intentionally sequenced layout</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Arrange panels in a logical flow—overview first, details second. Place top-level KPIs and summaries at the top, trends and comparisons in the middle, and deeper explorations or tables at the bottom.
+</p>
 <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
-  <li>Reserve left columns for high-level summaries.</li>
-  <li>Group filters and controls together for quick scanning.</li>
-  <li>Leave breathing room—crowded dashboards feel chaotic.</li>
+  <li>Reserve the left or top for the most important story beats.</li>
+  <li>Align related panels to guide the reader’s eye naturally.</li>
+  <li>Group filters and controls for clarity and keep plenty of white space for visual breathing room.</li>
 </ul>
-<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Layout communicates priority.</p>`,
-  `<h4 class="text-lg font-semibold text-blue-200">Eliminate redundancy</h4>
-<p class="mt-2 text-sm text-slate-200">Every tile should teach something new. If two graphs repeat the same insight, combine them or select the clearer one.</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Layout reinforces how the story unfolds.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Eliminate redundancy</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Each chart should add a unique insight. Redundant visuals dilute focus and make dashboards harder to maintain. 
+  Instead of showing multiple variations of the same data, combine perspectives into a single, richer view.
+</p>
 <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-200">
-  <li>Use cross-filtering instead of duplicate charts for each segment.</li>
-  <li>Replace repetitive labels with legends or subtitles.</li>
-  <li>Surface drill downs on demand to keep the main view focused.</li>
+  <li>Merge overlapping charts by adding filters, tooltips, or highlights.</li>
+  <li>Use shared legends or multi-metric panels instead of separate, similar visuals.</li>
+  <li>Favor a single clear chart over many minor variations—one strong story beat per panel.</li>
 </ul>
-<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Concise dashboards respect attention.</p>`,
-  `<h4 class="text-lg font-semibold text-blue-200">Add context and calls to action</h4>
-<p class="mt-2 text-sm text-slate-200">Annotate inflection points, explain thresholds, and add “What to watch next” notes. Embed links to playbooks or JIRA tickets when follow-up is required.</p>
-<p class="mt-3 text-sm text-slate-200">Mango’s panel notes and markdown widgets make it easy to mix text with visuals.</p>
-<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Dashboards should tell viewers what to do, not just what happened.</p>`,
-  `<h4 class="text-lg font-semibold text-blue-200">Maintain and iterate</h4>
-<p class="mt-2 text-sm text-slate-200">Schedule regular reviews to archive stale panels, update annotations, and confirm data sources still refresh.</p>
-<p class="mt-3 text-sm text-slate-200">Log changes in Mango’s history or your project tracker so teammates know why layouts evolve.</p>
-<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Dashboards are products with a roadmap.</p>`
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Simplicity strengthens comprehension.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Document your intent</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Good dashboards are as readable by teammates as they are by viewers. Use notes, comments, and captions to explain how metrics are calculated or why certain visuals were chosen. 
+</p>
+<p class="mt-3 text-sm text-slate-200">
+  Keep a short “dashboard guide” or embedded text box summarizing its purpose and main takeaways. 
+  This helps others extend or update it later without losing the original reasoning.
+</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Comments preserve clarity long after charts change.</p>
+`,`
+<h4 class="text-lg font-semibold text-blue-200">Maintain and evolve the story</h4>
+<p class="mt-2 text-sm text-slate-200">
+  Revisit dashboards periodically to confirm the story still holds. Remove obsolete metrics, refresh visuals with new data, and verify that each panel still contributes to the overall message.
+</p>
+<p class="mt-3 text-sm text-slate-200">
+  Record updates briefly in shared documentation or inline comments so others can trace why certain changes were made or insights re-framed.
+</p>
+<p class="mt-3 text-xs uppercase tracking-wide text-slate-400">Key takeaway: Dashboards evolve—keep the story coherent as the data grows.</p>
+`
     ],
     quiz: lessonQuizzes['#making-dashboards']
   },
@@ -2800,7 +2824,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                     {practiceQuizLoading ? (
                       <>
                         <p className="font-semibold text-blue-200">Generating a practice quiz…</p>
-                        <p className="text-xs text-slate-300">Hang tight while we craft a 5-10 question quiz grounded in a fresh dataset tailored to your progress.</p>
+                        <p className="text-xs text-slate-300">Hang tight while we craft a short quiz grounded in a fresh dataset tailored to your progress.</p>
                       </>
                     ) : practiceQuizErrorMessage ? (
                       <>

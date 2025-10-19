@@ -328,6 +328,31 @@ export const useTabsStore = create<TabsStore>()(
       return state.activeTabId ? get().closeTab(state.activeTabId, force) : false;
     },
 
+    resetTabs: () => {
+      const state = get();
+
+      if (typeof window !== 'undefined') {
+        try {
+          state.tabs
+            .filter(tab => tab.type === 'canvas')
+            .forEach(tab => {
+              localStorage.removeItem(`infinite-canvas-workspace-${tab.id}`);
+            });
+          localStorage.removeItem('infinite-canvas-workspace');
+        } catch (error) {
+          console.warn('[tabsStore] Failed to clear canvas storage during reset', error);
+        }
+      }
+
+      const defaultState = createInitialState();
+
+      set({
+        tabs: defaultState.tabs,
+        activeTabId: defaultState.activeTabId,
+        nextTabOrder: defaultState.nextTabOrder
+      });
+    },
+
     // Persistence
     loadFromStorage: () => {
       if (typeof window === 'undefined') return;
