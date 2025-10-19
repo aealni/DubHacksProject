@@ -40,13 +40,34 @@ interface DataTabStore {
   addFilter: (filter: any) => void;
   removeFilter: (filterId: string) => void;
   setSortConfig: (config: any) => void;
-  savePendingEdits: () => Promise<void>;
+  savePendingEdits: () => Promise<boolean>;
   discardPendingEdits: () => Promise<void>;
   setError: (message: string | null) => void;
   cleanup: () => void;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
+const broadcastDatasetUpdate = (datasetId: string | number | null | undefined, source: string) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (datasetId === null || datasetId === undefined) {
+    return;
+  }
+
+  const numericId = Number(datasetId);
+  const payload = Number.isFinite(numericId) ? numericId : datasetId;
+
+  try {
+    window.dispatchEvent(new CustomEvent('dataset-updated', {
+      detail: { datasetId: payload, source }
+    }));
+  } catch (error) {
+    console.error('[DataTabProvider] Failed to broadcast dataset update', error);
+  }
+};
 
 type ColumnDefinition = DataTabStore['columns'][number];
 type GridRow = Record<string, any>;
@@ -89,10 +110,11 @@ const createDataTabStore = (tabId: string) => create<DataTabStore>()(
     loadDataset: async (datasetId: string) => {
       set({ isLoading: true, error: null, datasetId });
       try {
+        const requestOptions: RequestInit = { cache: 'no-store' };
         const [previewRes, metadataRes, infoRes] = await Promise.all([
-          fetch(`${BACKEND_URL}/dataset/${datasetId}/preview?limit=200&offset=0`),
-          fetch(`${BACKEND_URL}/dataset/${datasetId}/metadata`),
-          fetch(`${BACKEND_URL}/dataset/${datasetId}`)
+          fetch(`${BACKEND_URL}/dataset/${datasetId}/preview?limit=200&offset=0`, requestOptions),
+          fetch(`${BACKEND_URL}/dataset/${datasetId}/metadata`, requestOptions),
+          fetch(`${BACKEND_URL}/dataset/${datasetId}`, requestOptions)
         ]);
 
         if (!previewRes.ok) {
@@ -240,7 +262,7 @@ const createDataTabStore = (tabId: string) => create<DataTabStore>()(
       } = get();
 
       if (!selectedDataset?.id || Object.keys(pendingEdits).length === 0) {
-        return;
+        return false;
       }
 
       set({ isSaving: true, error: null });
@@ -263,9 +285,12 @@ const createDataTabStore = (tabId: string) => create<DataTabStore>()(
         if (datasetId) {
           await get().loadDataset(datasetId);
         }
+        broadcastDatasetUpdate(selectedDataset?.id ?? datasetId, 'data-tab');
+        return true;
       } catch (error) {
         console.error('Failed to save dataset edits:', error);
         set({ isSaving: false, error: error instanceof Error ? error.message : 'Failed to save edits' });
+        return false;
       }
     },
 
@@ -344,11 +369,52 @@ const DataGridContent: React.FC = () => {
     totalColumns
   } = dataState;
 
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+
   const displayColumns = useMemo<ColumnDefinition[]>(
     () => columns.filter((column: ColumnDefinition) => column.key !== '_rowid'),
     [columns]
   );
   const displayRows = useMemo<GridRow[]>(() => gridData.slice(0, 200), [gridData]);
+  const pendingCount = useMemo(() => Object.keys(pendingEdits).length, [pendingEdits]);
+  const hasPendingChanges = pendingCount > 0;
+
+  useEffect(() => {
+    if (hasPendingChanges) {
+      setLastSavedAt(null);
+    }
+  }, [hasPendingChanges]);
+
+  const statusText = useMemo(() => {
+    if (isSaving) {
+      return 'Saving changes…';
+    }
+    if (hasPendingChanges) {
+      return `${pendingCount} pending ${pendingCount === 1 ? 'change' : 'changes'}`;
+    }
+    if (lastSavedAt) {
+      return `Saved at ${new Date(lastSavedAt).toLocaleTimeString()}`;
+    }
+    return 'No pending edits';
+  }, [hasPendingChanges, isSaving, lastSavedAt, pendingCount]);
+
+  const handleSave = async () => {
+    if (isSaving || isLoading || !hasPendingChanges) {
+      return;
+    }
+    const didSave = await dataActions.savePendingEdits();
+    if (didSave) {
+      setLastSavedAt(Date.now());
+    }
+  };
+
+  const handleDiscard = async () => {
+    if (isSaving || isLoading || !hasPendingChanges) {
+      return;
+    }
+    await dataActions.discardPendingEdits();
+    setLastSavedAt(null);
+  };
   return (
     <div className="relative flex h-full w-full flex-col bg-white">
       <div className="flex items-center border-b border-gray-200 px-3 py-2">
@@ -452,6 +518,48 @@ const DataGridContent: React.FC = () => {
         </div>
       )}
 
+      {selectedDataset && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+          <div className="flex items-center gap-2">
+            <span
+              className={`font-medium ${
+                isSaving
+                  ? 'text-gray-800'
+                  : hasPendingChanges
+                    ? 'text-amber-700'
+                    : 'text-gray-600'
+              }`}
+            >
+              {statusText}
+            </span>
+            {hasPendingChanges && !isSaving && (
+              <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                Unsaved
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleDiscard()}
+              disabled={!hasPendingChanges || isSaving || isLoading}
+              className="border border-gray-300 px-2.5 py-1 text-[11px] font-medium text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+            >
+              Discard
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={!hasPendingChanges || isSaving || isLoading}
+              className="border border-gray-900 bg-gray-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-black disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              {isSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -499,6 +607,44 @@ const DataTabProvider: React.FC<TabProviderProps> = ({
       }
     };
   }, [tabId, isActive]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleDatasetUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ datasetId?: number | string; source?: string }>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+
+      const activeDatasetId = dataStore.getState().datasetId;
+      if (!activeDatasetId) {
+        return;
+      }
+
+      const eventDatasetIdRaw = detail.datasetId;
+      if (eventDatasetIdRaw === undefined || eventDatasetIdRaw === null) {
+        return;
+      }
+
+      const activeIdStr = String(activeDatasetId);
+      const eventIdStr = String(eventDatasetIdRaw);
+
+      if (activeIdStr !== eventIdStr) {
+        return;
+      }
+
+      if (detail.source === 'data-tab') {
+        return;
+      }
+
+      void dataStore.getState().loadDataset(String(activeDatasetId));
+    };
+
+    window.addEventListener('dataset-updated', handleDatasetUpdated as EventListener);
+    return () => window.removeEventListener('dataset-updated', handleDatasetUpdated as EventListener);
+  }, [dataStore]);
 
   const contextValue: DataTabContextValue = {
     tabId: state.tabId,

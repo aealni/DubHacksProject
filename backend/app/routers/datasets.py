@@ -1,6 +1,7 @@
 import json
 import logging
-from typing import Optional
+import builtins
+from typing import Any, List, Optional, Union
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -8,6 +9,8 @@ from sqlalchemy import text
 import time
 import sqlite3
 import pandas as pd
+import numpy as np
+from sklearn.impute import KNNImputer
 from ..db import get_db, engine
 from ..reset_db import full_reset, attempt_corruption_recovery, integrity_check
 from .. import models, schemas
@@ -20,6 +23,15 @@ from sqlalchemy import insert
 
 logger = logging.getLogger("udc.upload")
 router = APIRouter()
+
+SAFE_EVAL_BUILTIN_NAMES = [
+    'abs', 'min', 'max', 'round', 'len', 'sum', 'zip', 'enumerate', 'sorted',
+    'list', 'set', 'dict', 'tuple', 'range', 'any', 'all', 'map', 'filter',
+    'next', 'reversed', 'isinstance', 'issubclass', 'float', 'int', 'str',
+    'bool', 'print'
+]
+
+SAFE_EVAL_BUILTINS = {name: getattr(builtins, name) for name in SAFE_EVAL_BUILTIN_NAMES if hasattr(builtins, name)}
 
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB per spec
 ALLOWED_EXT = {'.csv', '.tsv', '.txt', '.xlsx', '.xls'}
@@ -79,6 +91,245 @@ def _snapshot_table(dataset_id: int, conn, source_table: str) -> Optional[int]:
         return None
 
 
+def _series_supports_numeric(series: pd.Series) -> bool:
+    if pd.api.types.is_numeric_dtype(series):
+        return True
+    try:
+        converted = pd.to_numeric(series.dropna().head(50), errors='coerce')
+        return not converted.isna().all()
+    except Exception:
+        return False
+
+
+def _coerce_bool_value(value: Any, *, allow_none: bool = True, errors: str = 'raise') -> Optional[bool]:
+    if value is None:
+        if allow_none:
+            return None
+        raise HTTPException(status_code=400, detail="Value is required")
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, np.integer)):
+        if value in (0, 1):
+            return bool(value)
+    if isinstance(value, float) and np.isnan(value):
+        if allow_none:
+            return None
+        raise HTTPException(status_code=400, detail="Value is required")
+    sval = str(value).strip().lower()
+    truthy = {'true', '1', 'yes', 'y', 't'}
+    falsy = {'false', '0', 'no', 'n', 'f'}
+    if sval in truthy:
+        return True
+    if sval in falsy:
+        return False
+    if errors == 'coerce' and allow_none:
+        return None
+    if errors == 'ignore':
+        return value  # type: ignore[return-value]
+    raise HTTPException(status_code=400, detail=f"Cannot interpret '{value}' as boolean")
+
+
+def _coerce_scalar(series: pd.Series, value: Any, *, allow_none: bool = True) -> Any:
+    if value is None:
+        if allow_none:
+            return None
+        raise HTTPException(status_code=400, detail="Value is required for this operation")
+    if pd.api.types.is_datetime64_any_dtype(series):
+        try:
+            return pd.to_datetime(value)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Unable to parse '{value}' as datetime: {exc}")
+    if pd.api.types.is_bool_dtype(series):
+        return _coerce_bool_value(value, allow_none=allow_none)
+    if _series_supports_numeric(series):
+        try:
+            return pd.to_numeric([value], errors='raise')[0]
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Value '{value}' is not numeric")
+    return str(value)
+
+
+def _prepare_iterable_values(series: pd.Series, values: Any, *, case_sensitive: bool) -> List[Any]:
+    if not isinstance(values, list):
+        values = [values]
+    if pd.api.types.is_datetime64_any_dtype(series):
+        try:
+            return [pd.to_datetime(v) for v in values]
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Failed to parse datetime value: {exc}")
+    if pd.api.types.is_bool_dtype(series):
+        return [_coerce_bool_value(v) for v in values]
+    if _series_supports_numeric(series):
+        prepared: List[Any] = []
+        for v in values:
+            try:
+                prepared.append(pd.to_numeric([v], errors='raise')[0])
+            except Exception:
+                raise HTTPException(status_code=400, detail=f"Value '{v}' is not numeric")
+        return prepared
+    if not case_sensitive:
+        return [str(v).lower() if v is not None else v for v in values]
+    return [str(v) if v is not None else v for v in values]
+
+
+def _evaluate_condition(series: pd.Series, cond: 'schemas.FilterCondition') -> pd.Series:
+    op = cond.operator
+    if op in {'eq', 'ne'}:
+        if pd.api.types.is_bool_dtype(series):
+            target = _coerce_bool_value(cond.value)
+            mask = series == target
+        elif pd.api.types.is_datetime64_any_dtype(series):
+            target = pd.to_datetime(cond.value) if cond.value is not None else None
+            mask = series == target
+        elif _series_supports_numeric(series):
+            target = _coerce_scalar(series, cond.value)
+            mask = series == target
+        else:
+            series_cmp = series.astype(str)
+            target = '' if cond.value is None else str(cond.value)
+            if not cond.case_sensitive:
+                series_cmp = series_cmp.str.lower()
+                target = target.lower()
+            mask = series_cmp == target
+        if op == 'ne':
+            mask = ~mask
+        return mask.fillna(False)
+    if op in {'gt', 'gte', 'lt', 'lte'}:
+        target = _coerce_scalar(series, cond.value, allow_none=False)
+        if op == 'gt':
+            mask = series > target
+        elif op == 'gte':
+            mask = series >= target
+        elif op == 'lt':
+            mask = series < target
+        else:
+            mask = series <= target
+        return mask.fillna(False)
+    if op in {'contains', 'not_contains', 'startswith', 'endswith'}:
+        if cond.value is None:
+            raise HTTPException(status_code=400, detail="Value is required for string comparison")
+        series_str = series.astype(str)
+        value = str(cond.value)
+        if op == 'contains':
+            mask = series_str.str.contains(value, case=cond.case_sensitive, na=False, regex=False)
+        elif op == 'not_contains':
+            mask = ~series_str.str.contains(value, case=cond.case_sensitive, na=False, regex=False)
+        elif op == 'startswith':
+            mask = series_str.str.startswith(value, na=False)
+            if not cond.case_sensitive:
+                mask = series_str.str.lower().str.startswith(value.lower(), na=False)
+        else:  # endswith
+            mask = series_str.str.endswith(value, na=False)
+            if not cond.case_sensitive:
+                mask = series_str.str.lower().str.endswith(value.lower(), na=False)
+        return mask.astype(bool)
+    if op in {'in', 'not_in'}:
+        prepared = _prepare_iterable_values(series, cond.value, case_sensitive=cond.case_sensitive)
+        if pd.api.types.is_bool_dtype(series):
+            mask = series.isin(prepared)
+        elif pd.api.types.is_datetime64_any_dtype(series) or _series_supports_numeric(series):
+            mask = series.isin(prepared)
+        else:
+            series_cmp = series.astype(str)
+            if not cond.case_sensitive:
+                series_cmp = series_cmp.str.lower()
+                prepared = [p.lower() if isinstance(p, str) else p for p in prepared]
+            mask = series_cmp.isin(prepared)
+        if op == 'not_in':
+            mask = ~mask
+        return mask.fillna(False)
+    if op == 'between':
+        if cond.value is None or cond.value_b is None:
+            raise HTTPException(status_code=400, detail="Between comparisons require two values")
+        lower = _coerce_scalar(series, cond.value, allow_none=False)
+        upper = _coerce_scalar(series, cond.value_b, allow_none=False)
+        mask = series.between(lower, upper, inclusive='both')
+        return mask.fillna(False)
+    if op == 'is_null':
+        return series.isna()
+    if op == 'not_null':
+        return series.notna()
+    raise HTTPException(status_code=400, detail=f"Unsupported operator {op}")
+
+
+def _build_filter_mask(df: pd.DataFrame, op: 'schemas.FilterRowsOperation') -> pd.Series:
+    if not op.conditions:
+        raise HTTPException(status_code=400, detail="Filter requires at least one condition")
+    if op.logic == 'and':
+        mask = pd.Series(True, index=df.index)
+        for cond in op.conditions:
+            if cond.column not in df.columns:
+                raise HTTPException(status_code=400, detail=f"Column {cond.column} does not exist")
+            mask &= _evaluate_condition(df[cond.column], cond)
+        return mask
+    mask = pd.Series(False, index=df.index)
+    for cond in op.conditions:
+        if cond.column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column {cond.column} does not exist")
+        mask |= _evaluate_condition(df[cond.column], cond)
+    return mask
+
+
+def _convert_bool_series(series: pd.Series, errors: str) -> pd.Series:
+    def parse(value: Any):
+        try:
+            return _coerce_bool_value(value, errors='coerce')
+        except HTTPException as exc:
+            if errors == 'ignore':
+                return value
+            if errors == 'raise':
+                raise exc
+            return None
+
+    parsed = series.map(parse)
+    if errors == 'ignore':
+        return parsed
+    return parsed.astype('boolean')
+
+
+def _convert_series_type(series: pd.Series, dtype: str, errors: str) -> pd.Series:
+    try:
+        if dtype == 'int':
+            numeric = pd.to_numeric(series, errors=errors)
+            if errors == 'ignore':
+                return numeric
+            if pd.isna(numeric).any():
+                return numeric.astype('Int64')
+            return numeric.astype('int64')
+        if dtype == 'float':
+            numeric = pd.to_numeric(series, errors=errors)
+            if errors == 'ignore':
+                return numeric
+            return numeric.astype('float64')
+        if dtype == 'string':
+            return series.astype('string')
+        if dtype == 'bool':
+            return _convert_bool_series(series, errors)
+        if dtype == 'datetime':
+            return pd.to_datetime(series, errors=errors)
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    raise HTTPException(status_code=400, detail=f"Unsupported dtype {dtype}")
+
+
+def _to_serializable(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: _to_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_to_serializable(v) for v in obj]
+    if isinstance(obj, pd.Timestamp):
+        return obj.isoformat()
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, np.generic):
+        return obj.item()
+    return obj
+
+
 def _build_report_block(meta: dict) -> schemas.ReportBlock:
     """Normalize raw metadata dict into ReportBlock ensuring required keys with defaults."""
     return schemas.ReportBlock(
@@ -98,7 +349,7 @@ async def upload_dataset(
     file: UploadFile = File(...),
     drop_row_missing_pct: float = 0.6,
     lowercase_categoricals: bool = True,
-    missing_mode: str = 'drop_rows',
+    missing_mode: str = 'leave',
     delimiter: Optional[str] = Form(None),
     config: Optional[str] = Form(None),
     db: Session = Depends(get_db)
@@ -325,6 +576,414 @@ def update_dataset_cells(
     db.commit()
 
     return schemas.CellEditResponse(updated=len(edits.edits))
+
+
+@router.post('/dataset/{dataset_id}/manipulate', response_model=schemas.ManipulationResponse)
+def manipulate_dataset(
+    dataset_id: int,
+    request: schemas.ManipulationRequest,
+    db: Session = Depends(get_db)
+):
+    dataset = db.query(models.Dataset).filter(models.Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    if not request.operations:
+        raise HTTPException(status_code=400, detail="No operations provided")
+
+    table = cleaned_table_name(dataset_id)
+    try:
+        df = pd.read_sql_query(f'SELECT * FROM {table}', con=engine)
+    except Exception as exc:
+        logger.error("Failed to read dataset %s for manipulation: %s", dataset_id, exc)
+        raise HTTPException(status_code=500, detail="Failed to load dataset for manipulation")
+
+    summaries: List[dict] = []
+
+    for op in request.operations:
+        if op.type == 'drop_columns':
+            missing = [col for col in op.columns if col not in df.columns]
+            if missing:
+                raise HTTPException(status_code=400, detail=f"Unknown columns for drop: {', '.join(missing)}")
+            df = df.drop(columns=op.columns)
+            summaries.append({
+                'operation': 'drop_columns',
+                'details': {
+                    'columns_dropped': op.columns,
+                    'remaining_columns': df.columns.tolist()
+                }
+            })
+        elif op.type == 'filter_rows':
+            before = len(df)
+            mask = _build_filter_mask(df, op)
+            df = df[mask].copy()
+            after = len(df)
+            summaries.append({
+                'operation': 'filter_rows',
+                'details': {
+                    'conditions': [cond.dict() for cond in op.conditions],
+                    'logic': op.logic,
+                    'rows_before': before,
+                    'rows_after': after,
+                    'rows_removed': before - after
+                }
+            })
+        elif op.type == 'sort_values':
+            if not op.keys:
+                raise HTTPException(status_code=400, detail="Sort requires at least one key")
+            missing = [key.column for key in op.keys if key.column not in df.columns]
+            if missing:
+                raise HTTPException(status_code=400, detail=f"Unknown columns for sort: {', '.join(missing)}")
+            by = [key.column for key in op.keys]
+            ascending = [key.ascending for key in op.keys]
+            df = df.sort_values(by=by, ascending=ascending, na_position=op.na_position).reset_index(drop=True)
+            summaries.append({
+                'operation': 'sort_values',
+                'details': {
+                    'keys': [key.dict() for key in op.keys],
+                    'na_position': op.na_position
+                }
+            })
+        elif op.type == 'drop_duplicates':
+            subset = op.subset or None
+            if subset:
+                missing = [col for col in subset if col not in df.columns]
+                if missing:
+                    raise HTTPException(status_code=400, detail=f"Unknown columns for drop_duplicates: {', '.join(missing)}")
+            before = len(df)
+            keep_param: Union[str, bool] = False if op.keep == 'none' else op.keep
+            df = df.drop_duplicates(subset=subset, keep=keep_param).reset_index(drop=True)
+            after = len(df)
+            summaries.append({
+                'operation': 'drop_duplicates',
+                'details': {
+                    'subset': subset,
+                    'keep': op.keep,
+                    'rows_removed': before - after
+                }
+            })
+        elif op.type == 'fill_missing':
+            column = op.column
+            if column not in df.columns:
+                raise HTTPException(status_code=400, detail=f"Column {column} not found for fill_missing")
+            series = df[column]
+            before_na = int(series.isna().sum())
+            if op.strategy in {'mean', 'median'}:
+                if not _series_supports_numeric(series):
+                    raise HTTPException(status_code=400, detail=f"Column {column} is not numeric")
+                computed = getattr(series, op.strategy)()
+                if pd.isna(computed):
+                    raise HTTPException(status_code=400, detail=f"Unable to compute {op.strategy} for column {column}")
+                df[column] = series.fillna(computed)
+                fill_value = computed
+            elif op.strategy == 'mode':
+                mode_vals = series.mode(dropna=True)
+                if mode_vals.empty:
+                    raise HTTPException(status_code=400, detail=f"Unable to determine mode for column {column}")
+                fill_value = mode_vals.iloc(0) if callable(getattr(mode_vals, '__call__', None)) else mode_vals.iloc[0]
+                df[column] = series.fillna(fill_value)
+            elif op.strategy == 'constant':
+                if op.value is None:
+                    raise HTTPException(status_code=400, detail="Constant value is required for fill_missing")
+                fill_value = _coerce_scalar(series, op.value)
+                df[column] = series.fillna(fill_value)
+            elif op.strategy == 'forward_fill':
+                df[column] = series.ffill()
+                fill_value = 'forward_fill'
+            elif op.strategy == 'backward_fill':
+                df[column] = series.bfill()
+                fill_value = 'backward_fill'
+            else:
+                raise HTTPException(status_code=400, detail=f"Unsupported fill strategy {op.strategy}")
+            after_na = int(df[column].isna().sum())
+            summaries.append({
+                'operation': 'fill_missing',
+                'details': {
+                    'column': column,
+                    'strategy': op.strategy,
+                    'value': _to_serializable(fill_value),
+                    'filled': before_na - after_na
+                }
+            })
+        elif op.type == 'knn_impute':
+            if not op.columns:
+                raise HTTPException(status_code=400, detail="KNN imputation requires at least one column")
+            missing = [col for col in op.columns if col not in df.columns]
+            if missing:
+                raise HTTPException(status_code=400, detail=f"Columns not found for KNN imputation: {', '.join(missing)}")
+            for col in op.columns:
+                if not _series_supports_numeric(df[col]):
+                    raise HTTPException(status_code=400, detail=f"Column {col} is not numeric enough for KNN imputation")
+            subset = pd.DataFrame({col: pd.to_numeric(df[col], errors='coerce') for col in op.columns}, index=df.index)
+            if subset.isna().all(axis=None):
+                raise HTTPException(status_code=400, detail="Selected columns could not be coerced to numeric for KNN imputation")
+            imputer = KNNImputer(n_neighbors=op.n_neighbors, weights=op.weights)
+            before_na = {col: int(df[col].isna().sum()) for col in op.columns}
+            try:
+                imputed_values = imputer.fit_transform(subset)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=f"KNN imputation failed: {exc}")
+            imputed_df = pd.DataFrame(imputed_values, columns=subset.columns, index=subset.index)
+            df[op.columns] = imputed_df
+            after_na = {col: int(df[col].isna().sum()) for col in op.columns}
+            summaries.append({
+                'operation': 'knn_impute',
+                'details': {
+                    'columns': op.columns,
+                    'n_neighbors': op.n_neighbors,
+                    'weights': op.weights,
+                    'filled_by_column': {col: before_na[col] - after_na[col] for col in op.columns}
+                }
+            })
+        elif op.type == 'rename_columns':
+            if not op.mapping:
+                raise HTTPException(status_code=400, detail="Rename operation requires at least one mapping")
+            missing = [old for old in op.mapping.keys() if old not in df.columns]
+            if missing:
+                raise HTTPException(status_code=400, detail=f"Columns not found for rename: {', '.join(missing)}")
+            new_names = list(op.mapping.values())
+            collision = set(new_names) - set(op.mapping.keys())
+            existing = set(df.columns) - set(op.mapping.keys())
+            if collision & existing:
+                raise HTTPException(status_code=400, detail=f"Rename would create duplicate columns: {', '.join(sorted(collision & existing))}")
+            df = df.rename(columns=op.mapping)
+            summaries.append({
+                'operation': 'rename_columns',
+                'details': {
+                    'mapping': op.mapping,
+                    'columns': df.columns.tolist()
+                }
+            })
+        elif op.type == 'convert_type':
+            column = op.column
+            if column not in df.columns:
+                raise HTTPException(status_code=400, detail=f"Column {column} not found for convert_type")
+            converted = _convert_series_type(df[column], op.dtype, op.errors)
+            df[column] = converted
+            summaries.append({
+                'operation': 'convert_type',
+                'details': {
+                    'column': column,
+                    'dtype': op.dtype,
+                    'errors': op.errors
+                }
+            })
+        elif op.type == 'normalize_columns':
+            if not op.columns:
+                raise HTTPException(status_code=400, detail="Normalization requires at least one column")
+            missing = [col for col in op.columns if col not in df.columns]
+            if missing:
+                raise HTTPException(status_code=400, detail=f"Columns not found for normalization: {', '.join(missing)}")
+            column_details: List[dict] = []
+            normalized_frames: dict[str, pd.Series] = {}
+            for col in op.columns:
+                series = pd.to_numeric(df[col], errors='coerce')
+                if series.isna().all():
+                    raise HTTPException(status_code=400, detail=f"Column {col} cannot be normalized (non-numeric values)")
+                if op.method == 'minmax':
+                    min_val = series.min()
+                    max_val = series.max()
+                    denom = max_val - min_val
+                    norm_series = pd.Series(0.0, index=series.index) if denom == 0 else (series - min_val) / denom
+                    column_details.append({'column': col, 'method': 'minmax', 'min': float(min_val), 'max': float(max_val)})
+                else:
+                    mean_val = series.mean()
+                    std_val = series.std(ddof=0)
+                    norm_series = pd.Series(0.0, index=series.index) if std_val == 0 else (series - mean_val) / std_val
+                    column_details.append({'column': col, 'method': 'zscore', 'mean': float(mean_val), 'std': float(std_val)})
+                normalized_frames[col] = norm_series
+            for col, norm_series in normalized_frames.items():
+                df[col] = norm_series
+            summaries.append({
+                'operation': 'normalize_columns',
+                'details': {
+                    'method': op.method,
+                    'columns': column_details
+                }
+            })
+        elif op.type == 'groupby':
+            if not op.group_by:
+                raise HTTPException(status_code=400, detail="GroupBy operation requires grouping columns")
+            for col in op.group_by:
+                if col not in df.columns:
+                    raise HTTPException(status_code=400, detail=f"Group-by column {col} not found")
+            if not op.aggregations:
+                raise HTTPException(status_code=400, detail="GroupBy operation requires at least one aggregation")
+            named_aggs: dict[str, tuple[str, str]] = {}
+            for agg in op.aggregations:
+                if agg.column not in df.columns:
+                    raise HTTPException(status_code=400, detail=f"Aggregation column {agg.column} not found")
+                alias = agg.alias or f"{agg.column}_{agg.func}"
+                if alias in named_aggs:
+                    raise HTTPException(status_code=400, detail=f"Duplicate aggregation alias {alias}")
+                named_aggs[alias] = (agg.column, agg.func)
+            try:
+                grouped = df.groupby(op.group_by, dropna=False).agg(**named_aggs).reset_index()
+            except Exception as exc:
+                raise HTTPException(status_code=400, detail=f"GroupBy failed: {exc}")
+            before_rows = len(df)
+            df = grouped
+            summaries.append({
+                'operation': 'groupby',
+                'details': {
+                    'group_by': op.group_by,
+                    'aggregations': [
+                        {
+                            'column': agg.column,
+                            'func': agg.func,
+                            'alias': agg.alias or f"{agg.column}_{agg.func}"
+                        }
+                        for agg in op.aggregations
+                    ],
+                    'rows_before': before_rows,
+                    'rows_after': len(df)
+                }
+            })
+        elif op.type == 'pandas_code':
+            code_text = op.code or ''
+            if not code_text.strip():
+                raise HTTPException(status_code=400, detail="Pandas code block cannot be empty")
+
+            rows_before, cols_before = df.shape
+            previous_columns = list(df.columns)
+            df_snapshot = df.copy()
+            exec_globals = {
+                '__builtins__': SAFE_EVAL_BUILTINS,
+                'pd': pd,
+                'np': np
+            }
+            local_env: dict[str, Any] = {
+                'df': df_snapshot,
+                'result': None
+            }
+
+            try:
+                exec(code_text, exec_globals, local_env)
+            except Exception as exc:
+                raise HTTPException(status_code=400, detail=f"Pandas code execution failed: {exc}")
+
+            new_df = local_env.get('df')
+            if new_df is None:
+                raise HTTPException(status_code=400, detail="Pandas code must leave a DataFrame in the variable 'df'")
+            if not isinstance(new_df, pd.DataFrame):
+                raise HTTPException(status_code=400, detail="Variable 'df' must be a pandas DataFrame after execution")
+
+            df = new_df
+
+            op_result = local_env.get('result')
+            result_payload: Optional[dict[str, Any]] | Any = None
+            if isinstance(op_result, pd.DataFrame):
+                result_payload = {
+                    'type': 'dataframe',
+                    'shape': [int(op_result.shape[0]), int(op_result.shape[1])],
+                    'preview': op_result.head(5).to_dict(orient='records')
+                }
+            elif isinstance(op_result, pd.Series):
+                result_payload = {
+                    'type': 'series',
+                    'length': int(op_result.shape[0]),
+                    'preview': op_result.head(10).tolist()
+                }
+            elif op_result is not None:
+                result_payload = _to_serializable(op_result)
+
+            added_columns = sorted(set(df.columns) - set(previous_columns))
+            removed_columns = sorted(set(previous_columns) - set(df.columns))
+
+            code_lines = [line.rstrip()[:160] for line in code_text.strip().splitlines()]
+            if len(code_lines) > 4:
+                code_preview = code_lines[:4] + ['...']
+            else:
+                code_preview = code_lines
+
+            details: dict[str, Any] = {
+                'code_preview': code_preview,
+                'rows_before': rows_before,
+                'rows_after': len(df),
+                'cols_before': cols_before,
+                'cols_after': len(df.columns)
+            }
+            if added_columns:
+                details['columns_added'] = added_columns
+            if removed_columns:
+                details['columns_removed'] = removed_columns
+            if op.description:
+                details['description'] = op.description
+            if result_payload is not None:
+                details['result'] = result_payload
+
+            summaries.append({
+                'operation': 'pandas_code',
+                'details': details
+            })
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported operation type {op.type}")
+
+    df = df.reset_index(drop=True)
+
+    try:
+        save_cleaned_to_sqlite(df, dataset_id, engine, if_exists='replace')
+    except Exception as exc:
+        logger.error("Failed to persist manipulated dataset %s: %s", dataset_id, exc)
+        raise HTTPException(status_code=500, detail="Failed to persist manipulated dataset")
+
+    dataset.n_rows_clean = len(df)
+    dataset.n_cols_clean = len(df.columns)
+    dataset.updated_at = datetime.utcnow()
+    try:
+        pipeline_history = json.loads(dataset.pipeline_json or '[]')
+    except (TypeError, json.JSONDecodeError):
+        pipeline_history = []
+    timestamp = datetime.utcnow().isoformat()
+    pipeline_history.extend([
+        {
+            'type': summary['operation'],
+            'details': _to_serializable(summary['details']),
+            'timestamp': timestamp
+        }
+        for summary in summaries
+    ])
+    dataset.pipeline_json = json.dumps(pipeline_history)
+
+    db.add(dataset)
+    db.commit()
+
+    log_payload = {
+        'operations': [
+            {
+                'type': summary['operation'],
+                'details': _to_serializable(summary['details'])
+            }
+            for summary in summaries
+        ],
+        'row_count': len(df),
+        'column_count': len(df.columns)
+    }
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                insert(models.OperationLog),
+                {
+                    'dataset_id': dataset_id,
+                    'action_type': 'manipulation',
+                    'params_json': json.dumps(_to_serializable(log_payload))
+                }
+            )
+            _snapshot_table(dataset_id, conn, table)
+    except Exception as exc:
+        logger.warning("Failed to record manipulation log for dataset %s: %s", dataset_id, exc)
+
+    response_summaries = [
+        schemas.ManipulationSummary(operation=s['operation'], details=s['details'])
+        for s in summaries
+    ]
+
+    return schemas.ManipulationResponse(
+        operations_applied=response_summaries,
+        row_count=len(df),
+        column_count=len(df.columns)
+    )
 
 
 @router.get('/dataset/{dataset_id}/metadata', response_model=schemas.MetadataResponse)
@@ -893,7 +1552,7 @@ async def add_data_to_dataset(
     prefix_conflicting_columns: bool = Form(True),
     drop_row_missing_pct: float = Form(0.6),
     lowercase_categoricals: bool = Form(True),
-    missing_mode: str = Form('drop_rows'),
+    missing_mode: str = Form('leave'),
     delimiter: Optional[str] = Form(None),
     config: Optional[str] = Form(None),
     db: Session = Depends(get_db)

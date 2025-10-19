@@ -759,7 +759,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     const pathHasNoCanvas = Array.isArray(path) && path.some((n: any) => n && n.dataset && n.dataset.noCanvas === 'true');
 
     const isOverPanel = target.closest('.panel-content');
-    const isOverInteractiveElement = target.closest('button, input, select, textarea, [contenteditable], .no-drag');
+  const isOverInteractiveElement = target.closest('button, input, select, textarea, [contenteditable], .no-drag, label, a[href], [role="button"], [data-no-canvas]');
     const isMiddleButton = e.button === 1;
 
     // If the event originated from a UI control that should not trigger canvas actions, bail out early
@@ -1648,6 +1648,50 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     });
   }, [panels, bringPanelToFront]);
 
+  const handleDatasetUpdated = useCallback(async (datasetId: number) => {
+    if (!Number.isFinite(datasetId)) {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('dataset-updated', {
+          detail: { datasetId, source: 'canvas' }
+        }));
+      } catch (error) {
+        console.warn('[InfiniteCanvas] failed to dispatch dataset update event', error);
+      }
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/dataset/${datasetId}`, { cache: 'no-store' });
+      if (!response.ok) {
+        return;
+      }
+
+      const dataset = await response.json();
+      const panelsForDataset = panelsRef.current.filter((panel) => {
+        const rawId = panel.data?.datasetId ?? panel.data?.dataset_id ?? panel.data?.id;
+        const normalizedId = typeof rawId === 'string' ? Number(rawId) : rawId;
+        return Number.isFinite(normalizedId) && Number(normalizedId) === datasetId;
+      });
+
+      panelsForDataset.forEach((panel) => {
+        updatePanel(panel.id, {
+          data: {
+            ...panel.data,
+            ...dataset,
+            datasetId: dataset.id ?? datasetId,
+            dataset_id: dataset.id ?? datasetId,
+            datasetName: dataset.name ?? dataset.original_filename ?? panel.data?.datasetName
+          }
+        });
+      });
+    } catch (error) {
+      console.error('[InfiniteCanvas] failed to refresh dataset metadata', error);
+    }
+  }, [BACKEND_URL, updatePanel]);
+
   // Add a data manipulation panel connected to a dataset
   const addDataManipulationPanel = useCallback((datasetPanelId: string, manipulationData: any) => {
     const datasetPanel = panels.find(p => p.id === datasetPanelId);
@@ -2147,7 +2191,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
               onMouseDown={(e) => {
                 // Allow dragging from anywhere on the panel, but not from interactive elements
                 const target = e.target as HTMLElement;
-                const isInteractiveElement = target.closest('button, input, select, textarea, [contenteditable], .no-drag');
+                const isInteractiveElement = target.closest('button, input, select, textarea, [contenteditable], .no-drag, label, a[href], [role="button"], [data-no-canvas]');
                 
                 // Check if clicking near scrollbar area (within 15px of right edge of scrollable content)
                 const scrollableElement = target.closest('.scrollable-content, .overflow-auto, .overflow-y-auto, .overflow-x-auto');
@@ -2377,7 +2421,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                     }
                   }}
                   onDataUpdated={(datasetId) => {
-                    // Refresh any connected panels
+                    const numericId = Number(datasetId);
+                    if (!Number.isFinite(numericId)) {
+                      return;
+                    }
+                    void handleDatasetUpdated(numericId);
                   }}
                 />
               )}
@@ -2393,7 +2441,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                     }
                   }}
                   onDataUpdated={(datasetId) => {
-                    // Refresh any connected panels
+                    const numericId = Number(datasetId);
+                    if (!Number.isFinite(numericId)) {
+                      return;
+                    }
+                    void handleDatasetUpdated(numericId);
                   }}
                 />
               )}

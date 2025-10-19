@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import List, Dict, Any, Literal, Optional, Union
-from pydantic import BaseModel
+from typing import List, Dict, Any, Literal, Optional, Union, Annotated
+from pydantic import BaseModel, Field
 
 
 class DatasetBasic(BaseModel):
@@ -29,7 +29,7 @@ class CleaningConfig(BaseModel):
     constant_fill_value: Optional[str] = None
     lowercase_categoricals: bool = True
     date_cols: Optional[List[str]] = None
-    missing_mode: Literal['drop_rows', 'impute_mean', 'leave'] = 'drop_rows'
+    missing_mode: Literal['drop_rows', 'impute_mean', 'leave'] = 'leave'
     # Time formatting preferences (applied during pipeline when date_cols provided)
     time_format: Optional[str] = None  # e.g. '%Y-%m-%d', '%Y-%m-%d %H:%M:%S', 'iso', 'date', 'epoch_ms'
 
@@ -76,6 +76,129 @@ class ImputeSpec(BaseModel):
 
 class ImputeBatch(BaseModel):
     imputations: List[ImputeSpec]
+
+
+class FilterCondition(BaseModel):
+    column: str
+    operator: Literal[
+        'eq', 'ne', 'gt', 'gte', 'lt', 'lte',
+        'contains', 'not_contains', 'startswith', 'endswith',
+        'in', 'not_in', 'between', 'is_null', 'not_null'
+    ]
+    value: Optional[Any] = None
+    value_b: Optional[Any] = None
+    case_sensitive: bool = False
+
+
+class DropColumnsOperation(BaseModel):
+    type: Literal['drop_columns']
+    columns: List[str]
+
+
+class FilterRowsOperation(BaseModel):
+    type: Literal['filter_rows']
+    conditions: List[FilterCondition]
+    logic: Literal['and', 'or'] = 'and'
+
+
+class SortKey(BaseModel):
+    column: str
+    ascending: bool = True
+
+
+class SortValuesOperation(BaseModel):
+    type: Literal['sort_values']
+    keys: List[SortKey]
+    na_position: Literal['first', 'last'] = 'last'
+
+
+class DropDuplicatesOperation(BaseModel):
+    type: Literal['drop_duplicates']
+    subset: Optional[List[str]] = None
+    keep: Literal['first', 'last', 'none'] = 'first'
+
+
+class FillMissingOperation(BaseModel):
+    type: Literal['fill_missing']
+    column: str
+    strategy: Literal['mean', 'median', 'mode', 'constant', 'forward_fill', 'backward_fill']
+    value: Optional[Any] = None
+
+
+class RenameColumnsOperation(BaseModel):
+    type: Literal['rename_columns']
+    mapping: Dict[str, str]
+
+
+class ConvertTypeOperation(BaseModel):
+    type: Literal['convert_type']
+    column: str
+    dtype: Literal['int', 'float', 'string', 'bool', 'datetime']
+    errors: Literal['raise', 'ignore', 'coerce'] = 'coerce'
+
+
+class KNNImputeOperation(BaseModel):
+    type: Literal['knn_impute']
+    columns: List[str]
+    n_neighbors: int = 5
+    weights: Literal['uniform', 'distance'] = 'uniform'
+
+
+class NormalizeColumnsOperation(BaseModel):
+    type: Literal['normalize_columns']
+    columns: List[str]
+    method: Literal['minmax', 'zscore'] = 'minmax'
+
+
+class AggregationSpec(BaseModel):
+    column: str
+    func: Literal['count', 'sum', 'mean', 'median', 'min', 'max', 'std']
+    alias: Optional[str] = None
+
+
+class GroupByOperation(BaseModel):
+    type: Literal['groupby']
+    group_by: List[str]
+    aggregations: List[AggregationSpec]
+
+
+class PandasCodeOperation(BaseModel):
+    type: Literal['pandas_code']
+    code: str
+    description: Optional[str] = None
+
+
+ManipulationOperation = Annotated[
+    Union[
+        DropColumnsOperation,
+        FilterRowsOperation,
+        SortValuesOperation,
+        DropDuplicatesOperation,
+        FillMissingOperation,
+        RenameColumnsOperation,
+        ConvertTypeOperation,
+        KNNImputeOperation,
+        NormalizeColumnsOperation,
+        GroupByOperation,
+        PandasCodeOperation
+    ],
+    Field(discriminator='type')
+]
+
+
+class ManipulationRequest(BaseModel):
+    operations: List[ManipulationOperation]
+
+
+class ManipulationSummary(BaseModel):
+    operation: str
+    details: Dict[str, Any]
+
+
+class ManipulationResponse(BaseModel):
+    operations_applied: List[ManipulationSummary]
+    row_count: int
+    column_count: int
 
 
 # Multi-upload and merge schemas
