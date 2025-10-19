@@ -27,6 +27,11 @@ import {
 } from '../utils/canvas/types';
 import { canvasReducer, createInitialState } from '../utils/canvas/canvasReducer';
 import { 
+  calculateSnapTargets, 
+  getSnapPosition, 
+  checkSnapCollision 
+} from '../utils/canvas/snapUtils';
+import { 
   GRID_SIZE, 
   MIN_ZOOM, 
   MAX_ZOOM, 
@@ -38,11 +43,6 @@ import {
   ALIGN_THRESHOLD_PX,
   DEBUG_SNAP
 } from '../utils/canvas/constants';
-import { 
-  calculateSnapTargets, 
-  getSnapPosition, 
-  checkSnapCollision 
-} from '../utils/canvas/snapUtils';
 import { PANEL_SIZES } from '../utils/canvas/panelSizes';
 
 interface InfiniteCanvasProps {
@@ -189,6 +189,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
   // Consolidated state management with useReducer - create unique initial state per instance
   const initialState = useMemo(() => createInitialState(), []);
   const [state, dispatch] = useReducer(canvasReducer, initialState);
+  const panelsRef = useRef<Panel[]>(state.panels);
   // Instrumentation refs
   const lastPanelsRef = useRef<string[]>([]);
   const hasEverSavedRef = useRef(false);
@@ -221,6 +222,10 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     panelInteractionOrder,
     processedPanelIds
   } = state;
+
+  useEffect(() => {
+    panelsRef.current = panels;
+  }, [panels]);
 
   // Workspace persistence
   const saveWorkspace = useCallback(() => {
@@ -623,6 +628,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     };
   }, [viewport]);
 
+  const getCanvasCenter = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return { x: 0, y: 0 };
+    }
+    const centerX = (-viewport.x / viewport.zoom) + (window.innerWidth / 2) / viewport.zoom;
+    const centerY = (-viewport.y / viewport.zoom) + (window.innerHeight / 2) / viewport.zoom;
+    return { x: centerX, y: centerY };
+  }, [viewport.x, viewport.y, viewport.zoom]);
   // Handle mouse wheel for zooming
   const handleWheel = useCallback((e: React.WheelEvent) => {
     // Check if mouse is over a panel content area
@@ -1116,7 +1129,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
 
   // Shared styling for small overlay icon buttons to ensure consistent hit area & avoid drag conflicts
   // Unified small icon button styling (match + / x: backgroundless, crisp icon)
-  const overlayIconButtonClass = "no-drag inline-flex items-center justify-center h-5 w-5 rounded-sm bg-transparent text-slate-600 hover:text-slate-900 transition-colors";
+  const overlayIconButtonClass = "no-drag inline-flex items-center justify-center h-5 w-5 rounded-none bg-transparent text-slate-600 hover:text-slate-900 transition-colors";
 
   // Remove panel function
   const removePanel = useCallback((panelId: string) => {
@@ -1278,11 +1291,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       type: 'model',
       x: datasetPanel.x + datasetPanel.width + PANEL_SPACING,
       y: datasetPanel.y,
-      width: PANEL_SIZES.MODEL.collapsed.width,
-      height: PANEL_SIZES.MODEL.collapsed.height,
+      width: PANEL_SIZES.MODEL.expanded.width,
+      height: PANEL_SIZES.MODEL.expanded.height,
       data: modelData,
       parentId: datasetPanelId,
-      isExpanded: false
+      isExpanded: true
     };
     dispatch({ type: 'ADD_PANEL', payload: newPanel });
     bringPanelToFront(newPanel.id); // Bring new panel to front
@@ -1373,13 +1386,14 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       type: 'model-results',
       x: modelPanel.x + modelPanel.width + PANEL_SPACING,
       y: modelPanel.y,
-      width: PANEL_SIZES.MODEL_RESULTS.collapsed.width,
-      height: PANEL_SIZES.MODEL_RESULTS.collapsed.height,
+      width: PANEL_SIZES.MODEL_RESULTS.expanded.width,
+      height: PANEL_SIZES.MODEL_RESULTS.expanded.height,
       data: resultsData,
       parentId: modelPanelId,
-      isExpanded: false
+      isExpanded: true
     };
     dispatch({ type: 'ADD_PANEL', payload: newPanel });
+    bringPanelToFront(newPanel.id);
 
     // Add connection
     const newConnection: Connection = {
@@ -1394,7 +1408,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     });
 
     return newPanel.id;
-  }, [panels]);
+  }, [panels, connections, bringPanelToFront]);
 
   // Add a model visualization panel connected to a model results panel
   const addModelVisualizationPanel = useCallback((modelResultsPanelId: string, visualizationData: any) => {
@@ -1413,6 +1427,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
       isExpanded: true
     };
     dispatch({ type: 'ADD_PANEL', payload: newPanel });
+    bringPanelToFront(newPanel.id);
 
     // Add connection
     const newConnection: Connection = {
@@ -1427,7 +1442,60 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     });
 
     return newPanel.id;
-  }, [panels]);
+  }, [panels, connections, bringPanelToFront]);
+
+  const requestVisualizationForPanel = useCallback(async (panelId: string, visualizationType: string) => {
+    const targetPanel = panelsRef.current.find(p => p.id === panelId);
+    if (!targetPanel || targetPanel.type !== 'model-results') {
+      console.error('[InfiniteCanvas] Visualization request aborted: target panel not found or incorrect type.', panelId);
+      return;
+    }
+
+    const resultsData = targetPanel.data ?? {};
+    const datasetIdRaw = resultsData.datasetId ?? resultsData.dataset_id;
+    const runId = resultsData.run_id;
+
+    if (!datasetIdRaw || !runId) {
+      console.error('[InfiniteCanvas] Visualization request aborted: missing datasetId or runId.', { datasetIdRaw, runId });
+      return;
+    }
+
+    const datasetId = Number(datasetIdRaw);
+    if (Number.isNaN(datasetId)) {
+      console.error('[InfiniteCanvas] Visualization request aborted: datasetId is not numeric.', datasetIdRaw);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/datasets/${datasetId}/model/visual`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          run_id: String(runId),
+          kind: visualizationType,
+          max_points: 2000
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[InfiniteCanvas] Visualization request failed (${response.status}):`, errorText);
+        return;
+      }
+
+      const result = await response.json();
+      addModelVisualizationPanel(panelId, {
+        ...result,
+        activeType: visualizationType,
+        datasetId,
+        run_id: String(runId)
+      });
+    } catch (error) {
+      console.error('[InfiniteCanvas] Visualization request error:', error);
+    }
+  }, [BACKEND_URL, addModelVisualizationPanel]);
 
   // Render grid background
   const memoizedGrid = useMemo(() => {
@@ -1671,28 +1739,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
             const panelZIndex = getPanelZIndex(panel.id);
             const isDraggedPanel = draggedPanel === panel.id;
             
-            function requestVisualizationForPanel(panelId: string, visualizationType: string) {
-              const panel = panels.find(p => p.id === panelId);
-              if (!panel) {
-              console.error(`Panel with ID ${panelId} not found.`);
-              return;
-              }
-
-              if (panel.type !== 'model-results') {
-              console.error(`Visualization can only be requested for 'model-results' panels. Panel ID: ${panelId}`);
-              return;
-              }
-
-              const visualizationData = {
-              type: visualizationType,
-              runId: panel.data?.run_id,
-              panelId: panelId,
-              };
-
-              addModelVisualizationPanel(panelId, visualizationData);
-              console.log(`Requested visualization of type '${visualizationType}' for panel ID: ${panelId}`);
-            }
-
             return (
               <div
                 key={panel.id}
@@ -1801,7 +1847,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
             >
               {/* Panel Overlay Controls - Compact row for long titles */}
               <div
-                className="absolute top-1 right-1 flex items-center gap-0.5 z-50 bg-white/90 backdrop-blur-sm rounded-md px-1 py-0.5 shadow-sm"
+                className="absolute top-1 right-1 flex items-center gap-0.5 z-50 bg-white/90 backdrop-blur-sm rounded-none px-1 py-0.5 shadow-sm"
                 onMouseDown={(e) => { e.stopPropagation(); }}
                 onClick={(e) => { e.stopPropagation(); }}
               >
@@ -1910,19 +1956,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                     }
                   }}
                   onCreateResultsPanel={(resultsData) => {
-                    const resultsPanel = addModelResultsPanel(panel.id, resultsData);
-                    
-                    // Auto-create visualization if requested and it's a regression model
-                    if (resultsData.autoCreateVisualization && resultsData.problem_type === 'regression') {
-                      // Create a pred_vs_actual visualization automatically
+                    const resultsPanelId = addModelResultsPanel(panel.id, resultsData);
+
+                    if (resultsPanelId && resultsData.autoCreateVisualization && resultsData.problem_type === 'regression') {
                       setTimeout(() => {
-                        // Find the results panel we just created
-                        const newResultsPanel = panels.find(p => p.type === 'model-results' && p.data?.run_id === resultsData.run_id);
-                        if (newResultsPanel) {
-                          // Auto-request visualization
-                          requestVisualizationForPanel(newResultsPanel.id, 'pred_vs_actual');
-                        }
-                      }, 100);
+                        void requestVisualizationForPanel(resultsPanelId, 'pred_vs_actual');
+                      }, 150);
                     }
                   }}
                 />
@@ -1990,7 +2029,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
               
               {/* Highlight overlay for selected panels */}
               {(isHighlighted || selectedIds.has(panel.id)) && (
-                <div className={`absolute inset-0 pointer-events-none rounded-xl ${selectedIds.has(panel.id) ? 'border-2 border-blue-500 bg-blue-500/5' : 'border-4 border-blue-500 animate-pulse bg-blue-500/10'}`} />
+                <div className={`absolute inset-0 pointer-events-none rounded-none ${selectedIds.has(panel.id) ? 'border-2 border-blue-500 bg-blue-500/5' : 'border-4 border-blue-500 animate-pulse bg-blue-500/10'}`} />
               )}
             </div>
             );
@@ -2063,7 +2102,16 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
                   <button
                     onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); /* don't perform actions on pointerdown */ }}
                     onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                    onClick={(e) => { e.stopPropagation(); try { throw new Error('menu-upload-click'); } catch (err: any) { console.log('[InfiniteCanvas] menu Upload clicked', { stack: err.stack }); } setOpenMenu(false); dispatch({ type: 'SET_UPLOAD_DIALOG', payload: { show: true, position: { x: 0, y: 0 } } }); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      try { throw new Error('menu-upload-click'); } catch (err: any) {
+                        console.log('[InfiniteCanvas] menu Upload clicked', { stack: err.stack });
+                      }
+                      setOpenMenu(false);
+                      const anchor = getCanvasCenter();
+                      dispatch({ type: 'SET_UPLOAD_DIALOG', payload: { show: false, position: anchor } });
+                      dispatch({ type: 'SET_UPLOAD_DIALOG', payload: { show: true } });
+                    }}
                     className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded"
                   >Upload Data</button>
                   <button
@@ -2168,7 +2216,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
           <button
             className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center"
             onClick={() => {
-              dispatch({ type: 'SET_UPLOAD_DIALOG', payload: { show: true, position: contextMenuPos } });
+              dispatch({ type: 'SET_UPLOAD_DIALOG', payload: { show: true } });
               dispatch({ type: 'SET_CONTEXT_MENU', payload: { show: false } });
             }}
           >
@@ -2202,20 +2250,28 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         isOpen={showUploadDialog}
         onClose={() => dispatch({ type: 'SET_UPLOAD_DIALOG', payload: { show: false } })}
         onUploadSuccess={(dataset) => {
-          // When a new dataset is uploaded, open it in a centralized data tab instead
-          // of creating an embedded canvas dataset panel. This matches user expectation
-          // of seeing a spreadsheet-like data viewer.
           try {
-            const title = dataset?.name || dataset?.original_filename || `Data ${dataset?.dataset_id ?? ''}`;
-            const newTabId = useTabsStore.getState().createTab('data', title, { datasetId: String(dataset?.dataset_id ?? dataset?.id ?? '') });
-            if (newTabId) {
-              try { useTabsStore.getState().switchToTab(newTabId); } catch (e) { /* ignore */ }
-            } else {
-              try { router.push(`/dataset/${dataset?.dataset_id ?? dataset?.id}/table`); } catch (e) { /* no-op */ }
-            }
+            const datasetId = dataset?.dataset_id ?? dataset?.id ?? Date.now();
+            const normalizedData = {
+              ...dataset,
+              id: datasetId,
+              dataset_id: datasetId,
+              name: dataset?.name || dataset?.original_filename || `Dataset ${datasetId}`
+            };
+
+            const hasValidAnchor =
+              typeof uploadPosition?.x === 'number' &&
+              typeof uploadPosition?.y === 'number' &&
+              !(uploadPosition.x === 0 && uploadPosition.y === 0 && panels.length > 0);
+
+            const anchor = hasValidAnchor ? uploadPosition : getCanvasCenter();
+            const datasetSize = PANEL_SIZES.DATASET.collapsed;
+            const spawnX = (anchor?.x ?? 0) - datasetSize.width / 2;
+            const spawnY = (anchor?.y ?? 0) - datasetSize.height / 2;
+
+            addDatasetPanel(spawnX, spawnY, normalizedData);
           } catch (err) {
-            console.error('[InfiniteCanvas] failed to open data tab after upload', err);
-            try { router.push(`/dataset/${dataset?.dataset_id ?? dataset?.id}/table`); } catch (e) { /* no-op */ }
+            console.error('[InfiniteCanvas] failed to add dataset panel after upload', err);
           }
         }}
         position={contextMenuPos}

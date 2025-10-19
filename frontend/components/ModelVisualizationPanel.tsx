@@ -209,7 +209,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
         
       default:
         return (
-          <div className="bg-gray-50 p-4 rounded max-w-full">
+      <div className="bg-gray-50 p-4 rounded-none max-w-full">
             <h5 className="font-medium mb-2">Raw Data ({kind})</h5>
             <pre className="text-xs overflow-auto max-h-40 max-w-full">
               {JSON.stringify(chartData, null, 2)}
@@ -259,7 +259,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
     return (
       <div className="flex flex-col items-center space-y-3">
         {title && <h4 className="text-sm font-medium text-gray-700">{title}</h4>}
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-none p-4">
           <svg width={width} height={height} className="mx-auto">
             {/* Grid lines */}
             <defs>
@@ -392,7 +392,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
     return (
       <div className="flex flex-col items-center space-y-3">
         <h4 className="text-sm font-medium text-gray-700">{title}</h4>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-none p-4">
           <svg width={width} height={height} className="mx-auto">
             {/* Grid lines */}
             <defs>
@@ -524,7 +524,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
     return (
       <div className="flex flex-col items-center space-y-3">
         <h4 className="text-sm font-medium text-gray-700">{title}</h4>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-none p-4">
           <svg width={width} height={height} className="mx-auto">
             {/* Bars */}
             {data.map((item, i) => {
@@ -589,7 +589,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
     return (
       <div className="flex flex-col items-center space-y-3">
         <h4 className="text-sm font-medium text-gray-700">Q-Q Plot (Normal Distribution)</h4>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-none p-4">
           <svg width={width} height={height} className="mx-auto">
             {/* Plot points */}
             {points.map((point, i) => {
@@ -649,7 +649,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
     return (
       <div className="flex flex-col items-center space-y-3">
         <h4 className="text-sm font-medium text-gray-700">Confusion Matrix</h4>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-none p-4">
           <svg width={width} height={height} className="mx-auto">
             {/* Matrix cells */}
             {matrix.map((row, i) => 
@@ -737,7 +737,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
             Area Under Curve: <span className="font-mono font-medium text-blue-600">{auc.toFixed(4)}</span>
           </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-none p-4">
           <svg width={width} height={height} className="mx-auto">
             {/* Grid lines */}
             <defs>
@@ -828,7 +828,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
   // Error renderer
   const renderError = (message: string) => {
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-2 p-6 bg-red-50 border border-red-200 rounded-lg">
+  <div className="flex flex-col items-center justify-center h-full space-y-2 p-6 bg-red-50 border border-red-200 rounded-none">
         <div className="text-red-600 font-bold text-lg">Error</div>
         <div className="text-red-800 font-medium text-center">{message}</div>
         <div className="text-red-600 text-sm text-center">
@@ -1038,8 +1038,8 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
   };
 
   return (
-    <div 
-      className="panel-content bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden relative"
+    <div
+      className="panel-content bg-white border border-gray-300 rounded-none shadow-lg overflow-hidden relative"
       style={{ 
         width: panel.width, 
         height: panel.height,
@@ -1047,10 +1047,10 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
       }}
     >
       {/* Header - simplified with visualization-specific actions only */}
-      <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 pr-24 rounded-t-lg border-b border-gray-200">
+  <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 pr-24 rounded-none border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-4 h-4 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full shadow-sm"></div>
+            <div className="w-4 h-4 bg-gradient-to-br from-purple-500 to-violet-600 rounded-none shadow-sm"></div>
             <div>
               <h3 className="font-semibold text-gray-800 text-sm">
                 {getVisualizationTitle(visualizationData?.activeType)}
@@ -1072,7 +1072,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
             {visualizationData?.image_base64 && (
               <button
                 onClick={fitToImage}
-                className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
+                className="p-2 rounded-none hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
                 title="Fit Panel to Image Size"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1086,7 +1086,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
               <>
                 <button
                   onClick={downloadImage}
-                  className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
+                  className="p-2 rounded-none hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
                   title="Download PNG"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1097,7 +1097,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
                 {visualizationData?.data && (
                   <button
                     onClick={downloadSVGFile}
-                    className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
+                    className="p-2 rounded-none hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
                     title="Download SVG"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1111,7 +1111,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
             {visualizationData?.image_base64 && (
               <button
                 onClick={copyToClipboard}
-                className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
+                className="p-2 rounded-none hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 text-xs"
                 title="Copy to Clipboard"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1138,7 +1138,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
                   <img
                     src={`data:image/png;base64,${visualizationData.image_base64}`}
                     alt={getVisualizationTitle(visualizationData.activeType)}
-                    className="max-w-full max-h-full object-contain border border-gray-200 rounded"
+                    className="max-w-full max-h-full object-contain border border-gray-200 rounded-none"
                     style={{ 
                       maxWidth: '100%',
                       maxHeight: '100%'
@@ -1172,7 +1172,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
 
               {/* Metrics or Additional Info */}
               {visualizationData.metrics && (
-                <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                <div className="bg-gray-50 border border-gray-200 rounded-none p-3">
                   <h5 className="text-xs font-semibold text-gray-700 mb-2">Metrics</h5>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {Object.entries(visualizationData.metrics).map(([key, value]: [string, any]) => (
@@ -1189,7 +1189,7 @@ export const ModelVisualizationPanel: React.FC<ModelVisualizationPanelProps> = (
 
               {/* Description */}
               {visualizationData.description && (
-                <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded-none">
                   {visualizationData.description}
                 </div>
               )}

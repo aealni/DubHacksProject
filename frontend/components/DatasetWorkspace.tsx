@@ -37,6 +37,7 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
   onDatasetChange
 }) => {
   const router = useRouter();
+  const mergeParam = router.query.merge;
   const [currentDataset, setCurrentDataset] = useState<Dataset | null>(null);
   const [relatedDatasets, setRelatedDatasets] = useState<RelatedDataset[]>([]);
   const [showSidebar, setShowSidebar] = useState(true);
@@ -87,6 +88,18 @@ export const DatasetWorkspace: React.FC<DatasetWorkspaceProps> = ({
 
   // Add data modal
   const [showAddData, setShowAddData] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (!mergeParam) return;
+    const shouldOpen = Array.isArray(mergeParam)
+      ? mergeParam.some(value => value === '1' || value === 'true')
+      : mergeParam === '1' || mergeParam === 'true';
+    if (!shouldOpen) return;
+    setShowAddData(true);
+    const { merge: _merge, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router.isReady, mergeParam, router.pathname]);
 
   useEffect(() => {
     if (currentDatasetId) {

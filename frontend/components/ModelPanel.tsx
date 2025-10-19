@@ -33,7 +33,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
   const [lastTrainedConfig, setLastTrainedConfig] = useState<{target: string, features: string[]} | null>(null);
 
   // Use the expanded state from the panel prop, default to false if not set
-  const isExpanded = panel.isExpanded ?? false;
+  const isExpanded = panel.isExpanded ?? true;
   
   // Function to toggle expand state
   const toggleExpanded = () => {
@@ -345,7 +345,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
 
   return (
     <div
-      className={`panel-content relative bg-white border border-purple-300 rounded-xl shadow-xl overflow-hidden transition-all duration-300 ease-out ${
+      className={`panel-content relative bg-white border border-purple-300 rounded-none shadow-xl overflow-hidden transition-all duration-300 ease-out ${
         isDragging ? 'opacity-90 shadow-2xl scale-105' : 'shadow-lg'
       }`}
       style={{
@@ -355,10 +355,10 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
       }}
     >
       {/* Header - simplified without action buttons */}
-      <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-3 pr-24 rounded-t-xl border-b border-purple-200">
+  <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-3 pr-24 rounded-none border-b border-purple-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-purple-500 rounded-full shadow-sm"></div>
+            <div className="w-3 h-3 bg-purple-500 rounded-none shadow-sm"></div>
             <div>
               <h3 className="font-semibold text-gray-800 text-sm">Model Training</h3>
               <div className="text-xs text-gray-600 mt-1">
@@ -382,7 +382,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
         {isExpanded && (
           <div className="space-y-6">
             {/* Header Section with Model Type and Auto-Update Toggle */}
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-none p-4 border border-purple-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-purple-800">Model Configuration</h3>
                 <div className="flex items-center space-x-2">
@@ -391,7 +391,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                       type="checkbox"
                       checked={autoUpdate}
                       onChange={(e) => setAutoUpdate(e.target.checked)}
-                      className="rounded text-purple-600 focus:ring-purple-500"
+                      className="rounded-none text-purple-600 focus:ring-purple-500"
                     />
                     <span className="text-gray-700">Auto-update</span>
                   </label>
@@ -405,7 +405,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                   <select
                     value={modelType}
                     onChange={(e) => setModelType(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full p-3 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
                     {modelTypes.map((type) => (
                       <option key={type.value} value={type.value}>
@@ -421,7 +421,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                   <select
                     value={targetColumn}
                     onChange={(e) => setTargetColumn(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full p-3 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
                     <option value="">Select target column...</option>
                     {availableColumns.map((column) => (
@@ -433,7 +433,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
             </div>
 
             {/* Feature Selection Section */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="bg-white rounded-none border border-gray-200 p-4">
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h4 className="text-md font-semibold text-gray-800">
@@ -446,13 +446,13 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
                 <div className="flex space-x-2">
                   <button
                     onClick={handleSelectAllFeatures}
-                    className="px-3 py-1.5 text-xs font-medium bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-none transition-colors"
                   >
                     Select All
                   </button>
                   <button
                     onClick={handleClearFeatures}
-                    className="px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-none transition-colors"
                   >
                     Clear All
                   </button>
@@ -463,26 +463,46 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-48 overflow-y-auto">
                 {availableColumns
                   .filter(column => column !== targetColumn)
-                  .map((column) => (
-                    <label 
-                      key={column} 
-                      className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        featureColumns.includes(column)
-                          ? 'border-purple-500 bg-purple-50 text-purple-800'
-                          : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={featureColumns.includes(column)}
-                        onChange={() => handleColumnToggle(column)}
-                        className="rounded text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="text-sm font-medium truncate" title={column}>
-                        {column}
-                      </span>
-                    </label>
-                  ))}
+                  .map((column) => {
+                    const isSelected = featureColumns.includes(column);
+                    return (
+                      <button
+                        key={column}
+                        type="button"
+                        onClick={() => handleColumnToggle(column)}
+                        className={`group relative flex items-center gap-2 p-3 rounded-none border-2 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+                          isSelected
+                            ? 'border-purple-500 bg-purple-50 text-purple-800 shadow-sm'
+                            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 text-gray-700'
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="text-sm font-medium truncate" title={column}>
+                          {column}
+                        </span>
+                        <span
+                          className={`ml-auto flex h-5 w-5 items-center justify-center rounded-none border transition-colors ${
+                            isSelected
+                              ? 'border-transparent bg-purple-500 text-white'
+                              : 'border-gray-300 bg-white text-transparent'
+                          }`}
+                          aria-hidden="true"
+                        >
+                          <svg
+                            className="h-3.5 w-3.5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.5-3.5a1 1 0 011.414-1.414L8.75 11.586l6.543-6.543a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    );
+                  })}
               </div>
               
               {availableColumns.filter(col => col !== targetColumn).length === 0 && (
@@ -494,14 +514,14 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
 
             {/* X-Axis Selection for Visualization (when multiple features) */}
             {featureColumns.length > 1 && (
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200">
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-none p-4 border border-indigo-200">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Visualization X-Axis (for regression plots)
                 </label>
                 <select
                   value={selectedXAxis}
                   onChange={(e) => setSelectedXAxis(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-3 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="">Select feature for X-axis...</option>
                   {featureColumns.map((column) => (
@@ -519,7 +539,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               <button
                 onClick={() => trainModel()}
                 disabled={isTraining || !targetColumn || featureColumns.length === 0}
-                className={`w-full p-4 rounded-lg text-sm font-medium transition-colors ${
+                className={`w-full p-4 rounded-none text-sm font-medium transition-colors ${
                   isTraining || !targetColumn || featureColumns.length === 0
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg'
@@ -527,7 +547,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               >
                 {isTraining ? (
                   <div className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <div className="animate-spin rounded-none h-4 w-4 border-2 border-white border-t-transparent"></div>
                     <span>Training Model...</span>
                   </div>
                 ) : (
@@ -542,8 +562,8 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
               
               {/* Model Status */}
               {autoUpdate && (
-                <div className="flex items-center space-x-2 text-xs text-gray-600 bg-blue-50 p-2 rounded-md">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <div className="flex items-center space-x-2 text-xs text-gray-600 bg-blue-50 p-2 rounded-none">
+                  <div className="w-2 h-2 bg-blue-500 rounded-none animate-pulse"></div>
                   <span>Auto-update enabled - model will retrain when features change</span>
                 </div>
               )}
@@ -551,7 +571,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ panel, onPanelUpdate, on
 
             {/* Error Display */}
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-none">
                 <div className="flex items-start space-x-2">
                   <div className="flex-shrink-0">
                     <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

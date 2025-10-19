@@ -338,7 +338,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
 
   return (
     <div
-      className={`panel-content relative bg-white rounded-xl shadow-xl border transition-all duration-300 ease-out ${
+      className={`panel-content relative bg-white rounded-none shadow-xl border transition-all duration-300 ease-out ${
         isExpanded ? 'border-green-400 shadow-2xl' : 'border-gray-200 hover:border-green-300 shadow-lg'
       }`}
       style={{
@@ -348,10 +348,10 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
       }}
     >
       {/* Header - simplified without action buttons */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 pr-24 rounded-t-xl border-b border-gray-200">
+  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 pr-24 rounded-none border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-none shadow-sm"></div>
             <div>
               <h3 className="font-semibold text-gray-800 text-sm">
                 {getGraphTypeName(panel.data?.graphType)}
@@ -387,7 +387,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                 Loading columns from dataset {panel.data.datasetId}...
                 <button
                   onClick={loadDatasetColumns}
-                  className="ml-2 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs"
+                  className="ml-2 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-none text-xs"
                 >
                   Retry
                 </button>
@@ -402,7 +402,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                       <select
                         value={selectedXColumn}
                         onChange={(e) => setSelectedXColumn(e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded text-xs"
+                        className="w-full p-1 border border-gray-300 rounded-none text-xs"
                       >
                         <option value="">Select column...</option>
                         {availableColumns.map(col => (
@@ -419,7 +419,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                       <select
                         value={selectedYColumn}
                         onChange={(e) => setSelectedYColumn(e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded text-xs"
+                        className="w-full p-1 border border-gray-300 rounded-none text-xs"
                       >
                         <option value="">Select column...</option>
                         {availableColumns.map(col => (
@@ -434,7 +434,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                 <button
                   onClick={generateGraph}
                   disabled={isLoading || (!selectedXColumn && panel.data.graphType !== 'correlation')}
-                  className="w-full mt-2 px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded text-xs"
+                  className="w-full mt-2 px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-none text-xs"
                 >
                   {isLoading ? 'Generating...' : 'Generate Graph'}
                 </button>
@@ -445,7 +445,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
         
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <div className="animate-spin rounded-none h-8 w-8 border-b-2 border-green-600"></div>
             <p className="text-sm text-gray-500 mt-2">Generating graph...</p>
           </div>
         ) : error ? (
@@ -454,7 +454,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
             <p className="text-sm text-red-600">{error}</p>
             <button
               onClick={generateGraph}
-              className="mt-2 px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded"
+              className="mt-2 px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-none"
             >
               Retry
             </button>
@@ -467,7 +467,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                 <img
                   src={`data:image/png;base64,${graphData.image_base64}`}
                   alt={graphData.title || 'Graph'}
-                  className={`rounded border max-w-full ${
+                  className={`rounded-none border max-w-full ${
                     isExpanded ? 'max-h-80' : 'max-h-32'
                   } object-contain mx-auto`}
                 />
@@ -502,13 +502,13 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({ panel, onPanelUpdate }) 
                       link.download = `${graphData.title || 'graph'}.png`;
                       link.click();
                     }}
-                    className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs"
+                    className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-none text-xs"
                   >
                     Download
                   </button>
                   <button
                     onClick={generateGraph}
-                    className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs"
+                    className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-none text-xs"
                   >
                     Regenerate
                   </button>

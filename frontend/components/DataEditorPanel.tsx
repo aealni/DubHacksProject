@@ -315,7 +315,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
 
   return (
     <div
-      className={`panel-content relative bg-white border border-indigo-300 rounded-xl shadow-xl overflow-hidden transition-all duration-300 ease-out ${
+      className={`panel-content relative bg-white border border-indigo-300 rounded-none shadow-xl overflow-hidden transition-all duration-300 ease-out ${
         isDragging ? 'opacity-90 shadow-2xl scale-105' : 'shadow-lg'
       }`}
       style={{
@@ -324,10 +324,10 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
       }}
     >
       {/* Header - simplified without action buttons */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 pr-24 rounded-t-xl border-b border-gray-200">
+  <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 pr-24 rounded-none border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-indigo-500 rounded-full shadow-sm"></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-none shadow-sm"></div>
             <div>
               <h3 className="font-semibold text-gray-800 text-sm">Data Editor</h3>
               <div className="text-xs text-gray-600 mt-1">
@@ -348,7 +348,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
           <div className="space-y-3">
             {isLoading ? (
               <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mx-auto"></div>
+                <div className="animate-spin rounded-none h-6 w-6 border-b-2 border-indigo-600 mx-auto"></div>
                 <p className="text-sm text-gray-500 mt-2">Loading data...</p>
               </div>
             ) : error ? (
@@ -356,7 +356,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
                 <p className="text-sm text-red-600">{error}</p>
                 <button
                   onClick={loadData}
-                  className="mt-2 px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded text-xs"
+                  className="mt-2 px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-none text-xs"
                 >
                   Retry
                 </button>
@@ -364,7 +364,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
             ) : data && data.rows ? (
               <>
                 {/* Data Table */}
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border rounded-none overflow-hidden">
                   <div className="overflow-x-auto max-h-96">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 sticky top-0">
@@ -377,7 +377,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
                                     type="text"
                                     value={newColumnName}
                                     onChange={(e) => setNewColumnName(e.target.value)}
-                                    className="px-1 py-0.5 border rounded text-xs w-20"
+                                    className="px-1 py-0.5 border rounded-none text-xs w-20"
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         handleColumnRename(column, newColumnName);
@@ -434,7 +434,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
                                       type="text"
                                       value={editingValue}
                                       onChange={(e) => setEditingValue(e.target.value)}
-                                      className="px-1 py-0.5 border rounded text-xs w-full"
+                                      className="px-1 py-0.5 border rounded-none text-xs w-full"
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                           saveCellEdit();
@@ -460,7 +460,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
                                 ) : (
                                   <div
                                     onClick={() => startCellEdit(rowIndex, column, row[column])}
-                                    className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded"
+                                    className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded-none"
                                     title="Click to edit"
                                   >
                                     {String(row[column] || '')}
@@ -485,7 +485,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
                       <button
                         onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
                         disabled={currentPage === 0}
-                        className="px-2 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-2 py-1 border rounded-none disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Previous
                       </button>
@@ -495,7 +495,7 @@ export const DataEditorPanel: React.FC<DataEditorPanelProps> = ({
                       <button
                         onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
                         disabled={currentPage === totalPages - 1}
-                        className="px-2 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-2 py-1 border rounded-none disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Next
                       </button>

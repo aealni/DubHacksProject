@@ -263,7 +263,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
 
   return (
     <div
-      className={`panel-content relative bg-white border border-orange-300 rounded-xl shadow-xl overflow-hidden transition-all duration-300 ease-out ${
+      className={`panel-content relative bg-white border border-orange-300 rounded-none shadow-xl overflow-hidden transition-all duration-300 ease-out ${
         isDragging ? 'opacity-90 shadow-2xl scale-105' : 'shadow-lg'
       }`}
       style={{
@@ -272,12 +272,11 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
       }}
     >
       {/* Header - simplified without action buttons */}
-      <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 pr-24 rounded-t-xl border-b border-gray-200">
+    <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 pr-24 rounded-none border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-orange-500 rounded-full shadow-sm"></div>
-            <div>
-              <h3 className="font-semibold text-gray-800 text-sm">Data Manipulation</h3>
+      <div className="w-3 h-3 bg-orange-500 rounded-none shadow-sm"></div>
+      <div>
               <div className="text-xs text-gray-600 mt-1">
                 Dataset: {panel.data?.datasetName || panel.data?.datasetId}
               </div>
@@ -295,12 +294,12 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
         ) : (
           <div className="space-y-4">
             {/* Tabs */}
-            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <div className="flex space-x-1 bg-gray-100 p-1 rounded-none">
               {['clean', 'filter', 'transform'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
-                  className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-colors ${
+                  className={`flex-1 py-2 px-3 rounded-none text-xs font-medium transition-colors ${
                     activeTab === tab
                       ? 'bg-white text-orange-600 shadow-sm'
                       : 'text-gray-600 hover:text-gray-800'
@@ -318,11 +317,11 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Select Column
               </label>
-                          <select
-              value={selectedColumn}
-              onChange={(e) => setSelectedColumn(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-            >
+              <select
+                value={selectedColumn}
+                onChange={(e) => setSelectedColumn(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-none text-sm"
+              >
                 {columns.map(col => (
                   <option key={col} value={col}>{col}</option>
                 ))}
@@ -332,7 +331,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
             {/* Operations */}
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {activeTab === 'clean' && cleaningOperations.map(op => (
-                <div key={op.id} className="border border-gray-200 rounded-lg p-2">
+                <div key={op.id} className="border border-gray-200 rounded-none p-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span>{op.icon}</span>
@@ -344,7 +343,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
                     <button
                       onClick={() => performCleaningOperation(op.id)}
                       disabled={isProcessing}
-                      className="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-[10px] disabled:opacity-50"
+                      className="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-none text-[10px] disabled:opacity-50"
                     >
                       Apply
                     </button>
@@ -353,7 +352,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
               ))}
 
               {activeTab === 'transform' && transformOperations.map(op => (
-                <div key={op.id} className="border border-gray-200 rounded-lg p-2">
+                <div key={op.id} className="border border-gray-200 rounded-none p-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span>{op.icon}</span>
@@ -365,7 +364,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
                     <button
                       onClick={() => performCleaningOperation(op.id)}
                       disabled={isProcessing}
-                      className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-[10px] disabled:opacity-50"
+                      className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-none text-[10px] disabled:opacity-50"
                     >
                       Apply
                     </button>
@@ -383,21 +382,21 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
             {/* Processing Indicator */}
             {isProcessing && (
               <div className="flex items-center justify-center py-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                <div className="animate-spin rounded-none h-4 w-4 border-b-2 border-orange-600"></div>
                 <span className="ml-2 text-xs text-gray-600">Processing...</span>
               </div>
             )}
 
             {/* Error Display */}
             {error && (
-              <div className="p-2 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-2 bg-red-50 border border-red-200 rounded-none">
                 <p className="text-xs text-red-600">{error}</p>
               </div>
             )}
 
             {/* Results Display */}
             {results && (
-              <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+              <div className="p-2 bg-green-50 border border-green-200 rounded-none">
                 <p className="text-xs text-green-700">
                   Operation completed successfully
                 </p>
@@ -413,7 +412,7 @@ export const DataManipulationPanel: React.FC<DataManipulationPanelProps> = ({
             {dataPreview && dataPreview.rows && (
               <div>
                 <h4 className="text-xs font-medium text-gray-700 mb-1">Data Preview</h4>
-                <div className="bg-gray-50 rounded border max-h-24 overflow-auto">
+                <div className="bg-gray-50 rounded-none border max-h-24 overflow-auto">
                   <div className="text-[10px] p-1">
                     {dataPreview.rows.slice(0, 3).map((row: any, i: number) => (
                       <div key={i} className="text-gray-500 truncate">
