@@ -415,6 +415,30 @@ const topics: Topic[] = [
   }
 ];
 
+function shuffleArray<T>(input: T[]): T[] {
+  const array = [...input];
+  for (let index = array.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [array[index], array[swapIndex]] = [array[swapIndex], array[index]];
+  }
+  return array;
+}
+
+const shuffleQuizQuestions = (quiz: QuizQuestion[]): QuizQuestion[] => {
+  return quiz.map((question) => {
+    const shuffledOptions = shuffleArray(
+      question.options.map((option, optionIndex) => ({ option, optionIndex }))
+    );
+    const answerIndex = shuffledOptions.findIndex(({ optionIndex }) => optionIndex === question.answerIndex);
+
+    return {
+      ...question,
+      options: shuffledOptions.map(({ option }) => option),
+      answerIndex: answerIndex >= 0 ? answerIndex : 0
+    };
+  });
+};
+
 const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
     className={className}
@@ -431,7 +455,7 @@ const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const CompletedBadge: React.FC = () => (
-  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+  <span className="inline-flex items-center gap-1 border border-slate-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-200">
     <CheckIcon className="h-3 w-3" />
   </span>
 );
@@ -514,6 +538,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   const [detailPageIndex, setDetailPageIndex] = useState(0);
   const [detailTab, setDetailTab] = useState<'content' | 'quiz'>('content');
   const [quizState, setQuizState] = useState<Record<string, QuizState>>({});
+  const [shuffledQuizzes, setShuffledQuizzes] = useState<Record<string, QuizQuestion[]>>({});
   const detailRef = useRef<HTMLDivElement | null>(null);
   const dragState = useRef<{ offsetX: number; offsetY: number } | null>(null);
   const resizeState = useRef<
@@ -539,7 +564,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   }, []);
 
   const selectedTopic = selectedTopicAnchor ? topicMap.get(selectedTopicAnchor) : undefined;
-  const iconButtonClasses = 'inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 text-amber-200 transition hover:bg-amber-300 hover:text-slate-900';
+  const iconButtonClasses = 'inline-flex h-8 w-8 items-center justify-center border border-blue-400 text-blue-200 transition hover:bg-blue-600 hover:text-white';
 
   const computeDefaultDetailSize = useCallback((): { width: number; height: number } => {
     if (typeof window === 'undefined') {
@@ -716,6 +741,22 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   };
 
   const handleLearn = (anchor: string) => {
+    setShuffledQuizzes((prev) => {
+      if (!prev[anchor]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[anchor];
+      return next;
+    });
+    setQuizState((prev) => {
+      if (!prev[anchor]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[anchor];
+      return next;
+    });
     setDetailTab('content');
     setDetailPageIndex(0);
     setDetailSize(null);
@@ -763,6 +804,15 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
       }
 
       if (tab === 'quiz') {
+        setShuffledQuizzes((prev) => {
+          if (prev[selectedTopic.anchor]) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [selectedTopic.anchor]: shuffleQuizQuestions(selectedTopic.quiz)
+          };
+        });
         setQuizState((prev) => {
           const totalQuestions = selectedTopic.quiz.length;
           const existing = prev[selectedTopic.anchor];
@@ -893,8 +943,15 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
         ...prev,
         [anchor]: createDefaultQuizState(totalQuestions)
       }));
+      const topic = topicMap.get(anchor);
+      if (topic) {
+        setShuffledQuizzes((prev) => ({
+          ...prev,
+          [anchor]: shuffleQuizQuestions(topic.quiz)
+        }));
+      }
     },
-    []
+    [topicMap]
   );
 
   const goToPreviousPage = useCallback(() => {
@@ -1113,7 +1170,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
     : null;
   const currentPageDisplay = totalDetailPages === 0 ? 0 : detailPageIndex + 1;
 
-  const totalQuizQuestions = selectedTopic?.quiz.length ?? 0;
+  const activeQuizQuestions = selectedTopic
+    ? shuffledQuizzes[selectedTopic.anchor] ?? selectedTopic.quiz
+    : undefined;
+  const totalQuizQuestions = activeQuizQuestions?.length ?? 0;
   const rawTopicQuizState = selectedTopic ? quizState[selectedTopic.anchor] : undefined;
   const topicQuizState = selectedTopic
     ? ensureQuizStateSize(rawTopicQuizState, totalQuizQuestions)
@@ -1122,8 +1182,8 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
     ? Math.min(topicQuizState.questionIndex, Math.max(totalQuizQuestions - 1, 0))
     : 0;
   const currentAnswerState = topicQuizState?.answers[currentQuestionIndex];
-  const currentQuizQuestion = selectedTopic && totalQuizQuestions > 0
-    ? selectedTopic.quiz[currentQuestionIndex]
+  const currentQuizQuestion = activeQuizQuestions && totalQuizQuestions > 0
+    ? activeQuizQuestions[currentQuestionIndex]
     : undefined;
   const currentSelection = currentAnswerState?.selectedOptionIndex ?? null;
   const isCurrentSubmitted = currentAnswerState?.isSubmitted ?? false;
@@ -1136,9 +1196,9 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   const answeredCount = topicQuizState
     ? topicQuizState.answers.reduce((count, answer) => count + (answer.isSubmitted ? 1 : 0), 0)
     : 0;
-  const correctCount = selectedTopic && topicQuizState
+  const correctCount = topicQuizState && activeQuizQuestions
     ? topicQuizState.answers.reduce((count, answer, index) => {
-        const quizDefinition = selectedTopic.quiz[index];
+        const quizDefinition = activeQuizQuestions[index];
         if (!answer || !quizDefinition) {
           return count;
         }
@@ -1157,38 +1217,39 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 sm:p-8"
           style={{ zIndex: 9999 }}
         >
-          <div className="relative mt-8 mb-24 max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-amber-300/40 bg-slate-900/95 shadow-2xl">
+          <div className="relative mt-8 mb-24 max-h-[90vh] w-full max-w-3xl overflow-hidden border border-blue-300/40 bg-slate-900/95 shadow-2xl">
             <button
               type="button"
               onClick={() => {
                 onClose();
               }}
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-amber-400 text-sm text-amber-200 transition hover:bg-amber-400 hover:text-slate-950"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center border border-blue-400 text-sm text-blue-200 transition hover:bg-blue-600 hover:text-white"
               aria-label="Close education overlay"
             >
               <XIcon className="h-3.5 w-3.5" />
             </button>
-            <div className="no-scrollbar h-full max-h-[90vh] space-y-6 overflow-y-auto p-8 pr-6 text-left text-slate-100">
-              <div className="space-y-2">
-                <p className="text-sm uppercase tracking-[0.4em] text-amber-300">Education Mode</p>
+            <div className="no-scrollbar flex h-full max-h-[90vh] flex-col gap-6 p-8 pr-6 text-left text-slate-100">
+              <header className="flex-none space-y-2">
+                <p className="text-sm uppercase tracking-[0.4em] text-blue-300">Education Mode</p>
                 <h2 className="text-3xl font-semibold">Welcome to the Mango Learning Hub</h2>
                 <p className="text-sm text-slate-300">
                   This guided overlay highlights topics to explore while you experiment inside the workspace. Use it as a
                   quick reference or a starting point for a structured session.
                 </p>
-              </div>
-              <div className="rounded-xl border border-amber-300/30 bg-slate-900/60 p-6">
-                <h3 className="text-lg font-semibold text-amber-200">Bookmarks</h3>
+              </header>
+              <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto">
+                <div className="border border-blue-300/30 bg-slate-900/60 p-6">
+                <h3 className="text-lg font-semibold text-blue-200">Bookmarks</h3>
                 {bookmarkedTopics.length === 0 ? (
                   <p className="mt-2 text-xs text-slate-400">
-                    Tap the <span className="font-semibold text-amber-100">bookmark icon</span> on any topic to collect it here for quick access.
+                    Tap the <span className="font-semibold text-blue-100">bookmark icon</span> on any topic to collect it here for quick access.
                   </p>
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {bookmarkedTopics.map((topic) => {
                       const completed = isTopicCompleted(topic.anchor);
                       return (
-                        <li key={`bookmark-${topic.anchor}`} className="relative rounded-lg border border-slate-700/60 bg-slate-800/60 p-3">
+                        <li key={`bookmark-${topic.anchor}`} className="relative border border-slate-700/60 bg-slate-800/60 p-3">
                           <button
                             type="button"
                             onClick={() => handleRemoveBookmark(topic.anchor)}
@@ -1202,7 +1263,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleLearn(topic.anchor)}
-                                className="text-left text-sm font-medium text-amber-200 transition hover:text-amber-100"
+                                className="text-left text-sm font-medium text-blue-200 transition hover:text-blue-100"
                               >
                                 {topic.title}
                               </button>
@@ -1215,7 +1276,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleLearn(topic.anchor)}
-                                className="inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-900 transition hover:bg-amber-200"
+                                className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-700"
                               >
                                 Learn topic
                               </button>
@@ -1228,7 +1289,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                                     handleMarkComplete(topic.anchor);
                                   }
                                 }}
-                                className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                                className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
                               >
                                 {completed ? 'Mark incomplete' : 'Mark complete'}
                               </button>
@@ -1239,9 +1300,9 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                     })}
                   </ul>
                 )}
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-6">
-                <h3 className="text-lg font-semibold text-amber-200">Concepts</h3>
+                </div>
+                <div className="border border-slate-700 bg-slate-900/60 p-6">
+                  <h3 className="text-lg font-semibold text-blue-200">Concepts</h3>
                 <p className="mb-4 text-xs text-slate-400">
                   Each section links to a concept you can explore. Future updates will include interactive walkthroughs and
                   workspace checkpoints.
@@ -1255,7 +1316,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                       return (
                         <li
                           key={topic.anchor}
-                          className="relative flex flex-col rounded-lg border border-slate-700/60 bg-slate-800/60 p-4 transition hover:border-amber-300/60"
+                          className="relative flex flex-col border border-slate-700/60 bg-slate-800/60 p-4 transition hover:border-blue-400/60"
                         >
                           <button
                             type="button"
@@ -1274,14 +1335,14 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                             <button
                               type="button"
                               onClick={() => handleLearn(topic.anchor)}
-                              className="inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-900 transition hover:bg-amber-200"
+                              className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-700"
                             >
                               Learn topic
                             </button>
                             <button
                               type="button"
                               onClick={() => handleMarkComplete(topic.anchor)}
-                              className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                              className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
                             >
                               Mark complete
                             </button>
@@ -1293,7 +1354,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                 )}
                 {completedTopics.length > 0 && (
                   <div className="mt-8 border-t border-slate-700/60 pt-6">
-                    <h4 className="text-base font-semibold text-amber-200">Completed</h4>
+                    <h4 className="text-base font-semibold text-blue-200">Completed</h4>
                     <p className="mb-4 mt-1 text-xs text-slate-400">Revisit topics any time or mark them incomplete to move them back into the main list.</p>
                     <ul className="space-y-3">
                       {completedTopics.map((topic) => {
@@ -1301,7 +1362,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                         return (
                           <li
                             key={`completed-${topic.anchor}`}
-                            className="relative flex flex-col rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4"
+                            className="relative flex flex-col border border-slate-500/40 bg-slate-800/60 p-4"
                           >
                             <button
                               type="button"
@@ -1321,14 +1382,14 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleLearn(topic.anchor)}
-                                className="inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-900 transition hover:bg-amber-200"
+                                className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-700"
                               >
                                 Review topic
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleMarkIncomplete(topic.anchor)}
-                                className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                                className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
                               >
                                 Mark incomplete
                               </button>
@@ -1339,6 +1400,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                     </ul>
                   </div>
                 )}
+                </div>
               </div>
              
             </div>
@@ -1350,7 +1412,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
         <aside
           ref={detailRef}
           tabIndex={0}
-          className="pointer-events-auto fixed z-[5000] flex flex-col rounded-2xl border border-amber-300/40 bg-slate-900/95 p-6 shadow-xl outline-none focus:outline-none"
+          className="pointer-events-auto fixed z-[5000] flex flex-col border border-blue-300/40 bg-slate-900/95 p-6 shadow-xl outline-none focus:outline-none"
           style={{
             top: detailPosition?.y ?? DETAIL_MARGIN,
             left: detailPosition ? detailPosition.x : undefined,
@@ -1372,7 +1434,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               onLostPointerCapture={handleDetailPointerCancel}
               onPointerCancel={handleDetailPointerCancel}
             >
-              <p className="text-xs uppercase tracking-[0.4em] text-amber-300">Focus Topic</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-blue-300">Focus Topic</p>
               <div className="mt-1 flex items-center gap-2">
                 <h3 className="text-2xl font-semibold text-slate-100">{selectedTopic.title}</h3>
                 {detailCompleted && <CompletedBadge />}
@@ -1381,20 +1443,20 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             <button
               type="button"
               onClick={handleCloseDetail}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-400 text-sm text-amber-200 transition hover:bg-amber-400 hover:text-slate-900"
+              className="flex h-8 w-8 items-center justify-center border border-blue-400 text-sm text-blue-200 transition hover:bg-blue-600 hover:text-white"
               aria-label="Close topic details"
             >
               <XIcon className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-4 flex gap-2 rounded-full bg-slate-800/60 p-1">
+          <div className="mt-4 flex gap-2 bg-slate-800/60 p-1">
             <button
               type="button"
               onClick={() => handleDetailTabChange('content')}
-              className={`flex-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`flex-1 px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                 detailTab === 'content'
-                  ? 'bg-amber-300 text-slate-900 shadow-sm'
-                  : 'text-amber-200 hover:text-amber-100'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-blue-200 hover:text-blue-100'
               }`}
             >
               Topic Notes
@@ -1402,10 +1464,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             <button
               type="button"
               onClick={() => handleDetailTabChange('quiz')}
-              className={`flex-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`flex-1 px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                 detailTab === 'quiz'
-                  ? 'bg-amber-300 text-slate-900 shadow-sm'
-                  : 'text-amber-200 hover:text-amber-100'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-blue-200 hover:text-blue-100'
               }`}
             >
               Quiz Now
@@ -1434,10 +1496,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                           onClick={() => handlePageSelect(pageIndex)}
                           disabled={isActive}
                           aria-current={isActive ? 'page' : undefined}
-                          className={`flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 text-xs font-semibold transition ${
+                          className={`flex h-8 w-8 items-center justify-center border border-blue-400 text-xs font-semibold transition ${
                             isActive
-                              ? 'cursor-default bg-amber-300 text-slate-900 shadow-sm'
-                              : 'text-amber-200 hover:bg-amber-300 hover:text-slate-900'
+                              ? 'cursor-default bg-blue-600 text-white shadow-sm'
+                              : 'text-blue-200 hover:bg-blue-600 hover:text-white'
                           }`}
                         >
                           {pageIndex + 1}
@@ -1450,13 +1512,13 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               <div className="flex h-full flex-col text-sm text-slate-200">
                 {currentQuizQuestion && topicQuizState ? (
                   <>
-                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-amber-200">
+                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-blue-200">
                       <span>
                         Question {currentQuestionIndex + 1} of {totalQuizQuestions}
                       </span>
                       
                     </div>
-                    <p className="mt-2 text-sm font-semibold text-amber-200">{currentQuizQuestion.question}</p>
+                    <p className="mt-2 text-sm font-semibold text-blue-200">{currentQuizQuestion.question}</p>
                     <div className="mt-2 flex flex-1 flex-col">
                       <div className="max-h-64 overflow-y-auto no-scrollbar space-y-2">
                         {currentQuizQuestion.options.map((option, optionIndex) => {
@@ -1466,13 +1528,13 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                           return (
                             <label
                               key={`${selectedTopic.anchor}-quiz-option-${optionIndex}`}
-                              className={`flex items-center gap-3 rounded-lg border border-amber-300/30 bg-slate-800/60 p-3 transition ${
-                                isChecked ? 'border-amber-300/70' : 'hover:border-amber-300/60'
+                              className={`flex items-center gap-3 border border-blue-300/30 bg-slate-800/60 p-3 transition ${
+                                isChecked ? 'border-blue-400/70' : 'hover:border-blue-400/60'
                               } ${
                                 isCurrentSubmitted
                                   ? isCorrectOption
-                                    ? 'border-emerald-400 bg-emerald-500/15 text-emerald-50'
-                                    : 'border-rose-500 bg-rose-500/10 text-rose-100'
+                                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-50'
+                                    : 'border-rose-500 bg-rose-500/20 text-rose-50'
                                   : ''
                               }`}
                             >
@@ -1482,7 +1544,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                                 value={optionIndex}
                                 checked={isChecked}
                                 onChange={() => handleQuizOptionChange(selectedTopic.anchor, optionIndex, totalQuizQuestions)}
-                                className="h-4 w-4 border-amber-300 text-amber-400 focus:ring-amber-400"
+                                className="h-4 w-4 border-blue-400 text-blue-500 focus:ring-blue-500"
                                 disabled={isCurrentSubmitted}
                               />
                               <span>{option}</span>
@@ -1495,10 +1557,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                           type="button"
                           onClick={() => handleQuizSubmit(selectedTopic.anchor, totalQuizQuestions)}
                           disabled={currentSelection === null || isCurrentSubmitted}
-                          className={`rounded-full border border-amber-300 px-3 py-1 font-semibold uppercase tracking-wide transition ${
+                          className={`border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide transition ${
                             currentSelection === null || isCurrentSubmitted
                               ? 'cursor-not-allowed text-slate-500'
-                              : 'text-amber-200 hover:bg-amber-300 hover:text-slate-900'
+                              : 'text-blue-200 hover:bg-blue-600 hover:text-white'
                           }`}
                         >
                           Check answer
@@ -1510,7 +1572,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                             <button
                               type="button"
                               onClick={() => handleQuizPreviousQuestion(selectedTopic.anchor, totalQuizQuestions)}
-                              className="rounded-full border border-amber-300 px-3 py-1 font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                              className="border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
                             >
                               Previous question
                             </button>
@@ -1519,7 +1581,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                             <button
                               type="button"
                               onClick={() => handleQuizNextQuestion(selectedTopic.anchor, totalQuizQuestions)}
-                              className="rounded-full border border-amber-300 px-3 py-1 font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                              className="border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
                             >
                               Next question
                             </button>
@@ -1527,10 +1589,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                         </div>
                         {isCurrentSubmitted && (
                           <div
-                            className={`rounded-lg border p-3 ${
+                            className={`border p-3 ${
                               isCurrentCorrect
-                                ? 'border-emerald-400 bg-emerald-500/15 text-emerald-50'
-                                : 'border-rose-500 bg-rose-500/10 text-rose-100'
+                                ? 'border-emerald-500 bg-emerald-500/20 text-emerald-50'
+                                : 'border-rose-500 bg-rose-500/20 text-rose-50'
                             }`}
                           >
                             <p>
@@ -1542,17 +1604,17 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                           </div>
                         )}
                         {topicQuizState.isComplete && totalQuizQuestions > 0 && (
-                          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-400/40 bg-emerald-500/10 p-3 text-emerald-100">
+                          <div className="flex flex-wrap items-center gap-3 border border-slate-500/60 bg-slate-800/80 p-3 text-slate-100">
                             <div>
-                              <p className="font-semibold text-emerald-200">Quiz complete!</p>
-                              <p className="text-emerald-100">
+                              <p className="font-semibold text-slate-100">Quiz complete!</p>
+                              <p className="text-slate-300">
                                 You answered {correctCount} of {totalQuizQuestions} correctly.
                               </p>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleQuizRestart(selectedTopic.anchor, totalQuizQuestions)}
-                              className="ml-auto rounded-full border border-emerald-300 px-3 py-1 font-semibold uppercase tracking-wide text-emerald-100 transition hover:bg-emerald-300 hover:text-slate-900"
+                              className="ml-auto border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
                             >
                               Retake quiz
                             </button>
@@ -1567,14 +1629,16 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               </div>
             )}
           </div>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleBookmarkToggle(selectedTopic.anchor)}
-              className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-            >
-              {detailIsBookmarked ? 'Unbookmark' : 'Bookmark'}
-            </button>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {!isOpen && onOpenMainOverlay && (
+              <button
+                type="button"
+                onClick={onOpenMainOverlay}
+                className="border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+              >
+                Home
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -1584,19 +1648,19 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                   handleMarkComplete(selectedTopic.anchor);
                 }
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+              className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
             >
               {detailCompleted ? 'Mark incomplete' : 'Mark complete'}
             </button>
-            {!isOpen && onOpenMainOverlay && (
-              <button
-                type="button"
-                onClick={onOpenMainOverlay}
-                className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-              >
-                Home
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => handleBookmarkToggle(selectedTopic.anchor)}
+              className="inline-flex items-center justify-center border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+              aria-label={detailIsBookmarked ? `Remove ${selectedTopic.title} from bookmarks` : `Bookmark ${selectedTopic.title}`}
+              title={detailIsBookmarked ? 'Unbookmark topic' : 'Bookmark topic'}
+            >
+              {detailIsBookmarked ? <BookmarkX className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+            </button>
           </div>
           <div
             className="absolute bottom-1 right-1 h-4 w-4 cursor-se-resize"
@@ -1613,7 +1677,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             aria-hidden="true"
           />
           <div
-            className="absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 transform cursor-ew-resize"
+            className="absolute left-1 top-1/2 h-4 w-2 -translate-y-1/2 transform cursor-ew-resize"
             style={{
                 background: `
                 linear-gradient(90deg, transparent 45%, white 45%, white 55%, transparent 55%),
