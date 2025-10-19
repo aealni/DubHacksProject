@@ -709,6 +709,40 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
     });
   }, [viewport]);
 
+  const zoomCanvasBy = useCallback((factor: number) => {
+    const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewport.zoom * factor));
+    if (clampedZoom === viewport.zoom) {
+      return;
+    }
+
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) {
+      dispatch({ type: 'SET_VIEWPORT', payload: { zoom: clampedZoom } });
+      return;
+    }
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const zoomRatio = clampedZoom / viewport.zoom;
+
+    dispatch({
+      type: 'SET_VIEWPORT',
+      payload: {
+        zoom: clampedZoom,
+        x: centerX - (centerX - viewport.x) * zoomRatio,
+        y: centerY - (centerY - viewport.y) * zoomRatio
+      }
+    });
+  }, [viewport, dispatch]);
+
+  const handleZoomIn = useCallback(() => {
+    zoomCanvasBy(1.1);
+  }, [zoomCanvasBy]);
+
+  const handleZoomOut = useCallback(() => {
+    zoomCanvasBy(0.9);
+  }, [zoomCanvasBy]);
+
   // Handle mouse down for panning / marquee
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     console.debug('[InfiniteCanvas] handleMouseDown', { button: e.button, target: (e.target as HTMLElement)?.className || (e.target as HTMLElement)?.tagName });
@@ -2579,18 +2613,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
           </div>
         </div>
       )}
-
-      {/* Controls */}
-      <div className="absolute top-4 right-4 pointer-events-auto">
-        <button
-          onClick={clearWorkspace}
-          className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm hover:bg-gray-50 text-red-600"
-          title="Clear all panels and reset workspace"
-        >
-          Clear
-        </button>
-      </div>
-
       {/* Layers Panel */}
       <LayersPanel
         panels={panels}
@@ -2621,7 +2643,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({
         <FeatureBar
           currentTool={currentTool}
           onChangeTool={(t) => setCurrentTool(t)}
-          onClearSelection={() => setSelectedIds(new Set())}
+          onClearWorkspace={() => {
+            setSelectedIds(new Set());
+            clearWorkspace();
+          }}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
         />
       </div>
         </>

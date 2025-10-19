@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Bookmark, BookmarkX, X as XIcon } from 'lucide-react';
 
 interface EducationOverlayProps {
   isOpen: boolean;
@@ -26,10 +27,15 @@ type Topic = {
   quiz: QuizQuestion[];
 };
 
-type QuizState = {
-  questionIndex: number;
+type QuizAnswerState = {
   selectedOptionIndex: number | null;
   isSubmitted: boolean;
+};
+
+type QuizState = {
+  questionIndex: number;
+  answers: QuizAnswerState[];
+  isComplete: boolean;
 };
 
 type ResizeMode = 'both' | 'horizontal-left';
@@ -53,6 +59,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Previewing sample rows surfaces delimiter issues immediately.'
+      },
+      {
+        question: 'Why should text fields be wrapped in quotes before exporting a CSV?',
+        options: [
+          'So commas and line breaks inside values stay part of the field',
+          'To reduce overall file size',
+          'Because spreadsheet tools require double quotes for numbers'
+        ],
+        answerIndex: 0,
+        explanation: 'Quoting prevents delimiters and newlines from splitting the field.'
       }
     ]
   },
@@ -74,6 +90,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Profiling the data exposes null patterns and category balance before transformation.'
+      },
+      {
+        question: 'What habit keeps teammates aligned on every data change you make?',
+        options: [
+          'Documenting each cleaning step along with why it was applied',
+          'Only announcing major schema changes in chat',
+          'Deleting intermediate datasets once the model trains successfully'
+        ],
+        answerIndex: 0,
+        explanation: 'Written change logs maintain shared context and reproducibility.'
       }
     ]
   },
@@ -95,6 +121,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Cleaning with deterministic checks first keeps corrupt values out of downstream imputations.'
+      },
+      {
+        question: 'Which approach keeps numeric features comparable when they span different scales?',
+        options: [
+          'Applying normalization or standardization that matches feature semantics',
+          'Leaving raw magnitudes intact so larger numbers dominate models',
+          'Rounding every value to the nearest integer before training'
+        ],
+        answerIndex: 0,
+        explanation: 'Thoughtful scaling preserves relationships while preventing any feature from overpowering the rest.'
       }
     ]
   },
@@ -116,6 +152,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Distributions paired with aggregates reveal hidden skew and shape.'
+      },
+      {
+        question: 'Why do analysts slice data by segments like time or geography?',
+        options: [
+          'To uncover variability that disappears in overall summaries',
+          'To inflate the number of charts in a presentation',
+          'To avoid comparing metrics between different cohorts'
+        ],
+        answerIndex: 0,
+        explanation: 'Segmenting surfaces differences that can change conclusions or next steps.'
       }
     ]
   },
@@ -137,6 +183,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Axes and scaling decisions heavily influence how changes appear.'
+      },
+      {
+        question: 'How do annotations or confidence bands help interpret a chart?',
+        options: [
+          'They explain uncertainty and highlight context that might change your takeaway',
+          'They clutter the view with unnecessary shapes',
+          'They guarantee the numbers are statistically significant'
+        ],
+        answerIndex: 0,
+        explanation: 'Context callouts keep you honest about the reliability of what you are seeing.'
       }
     ]
   },
@@ -158,6 +214,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Encodings are most effective when they reinforce the intended comparison.'
+      },
+      {
+        question: 'Why prototype multiple chart types early in the design process?',
+        options: [
+          'Different visuals can surface relationships that one chart alone might hide',
+          'Stakeholders expect every dataset to use at least five charts',
+          'Switching chart types automatically fixes data quality problems'
+        ],
+        answerIndex: 0,
+        explanation: 'Trying several views quickly reveals which framing best communicates the pattern.'
       }
     ]
   },
@@ -179,6 +245,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Decomposition isolates trend, seasonality, and residual components.'
+      },
+      {
+        question: 'What insight do rolling averages provide when monitoring a metric?',
+        options: [
+          'They smooth short-term noise so you can spot directional shifts',
+          'They automatically predict future revenue',
+          'They eliminate the need for any anomaly investigation'
+        ],
+        answerIndex: 0,
+        explanation: 'Windowed metrics reveal gradual movements that raw points can obscure.'
       }
     ]
   },
@@ -200,6 +276,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Documented provenance keeps feature creation reproducible.'
+      },
+      {
+        question: 'How do validation experiments guide whether to keep a new feature?',
+        options: [
+          'They show if the feature improves holdout performance without overfitting',
+          'They guarantee training accuracy reaches 100%',
+          'They let you skip monitoring models after deployment'
+        ],
+        answerIndex: 0,
+        explanation: 'Evaluating features against real metrics ensures additions earn their place.'
       }
     ]
   },
@@ -221,6 +307,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Choosing the right metric keeps focus on the outcomes that matter most.'
+      },
+      {
+        question: 'What does a confusion matrix help you uncover in classification models?',
+        options: [
+          'Which classes are being mistaken for one another',
+          'How to automatically rebalance your dataset',
+          'Whether feature engineering is still required'
+        ],
+        answerIndex: 0,
+        explanation: 'Breakdowns by predicted vs. actual class reveal the kinds of errors the model makes.'
       }
     ]
   },
@@ -242,6 +338,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Leading with summaries frames the story before deep-dives.'
+      },
+      {
+        question: 'Why should dashboards reuse a consistent color palette and typography?',
+        options: [
+          'Consistency keeps attention on the data instead of styling differences',
+          'Matching colors automatically enforces access controls',
+          'Viewers expect each panel to look completely unique'
+        ],
+        answerIndex: 0,
+        explanation: 'Familiar visuals reduce cognitive load so insights are easier to scan.'
       }
     ]
   },
@@ -263,6 +369,16 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Shared selections plus resets make cross-filtering transparent.'
+      },
+      {
+        question: 'Why should interactive dashboards include a legend for highlighted subsets?',
+        options: [
+          'It explains what the highlight represents across every linked view',
+          'It hides the fact that multiple filters are active',
+          'It removes the need for descriptive chart titles'
+        ],
+        answerIndex: 0,
+        explanation: 'Clear legends show people exactly which slice of data is currently emphasized.'
       }
     ]
   },
@@ -284,10 +400,44 @@ const topics: Topic[] = [
         ],
         answerIndex: 0,
         explanation: 'Embedded comments preserve context alongside the analysis.'
+      },
+      {
+        question: 'How do shared workspace snapshots help a project move faster?',
+        options: [
+          'They let teammates retrace steps and build from identical state',
+          'They replace the need for code review',
+          'They ensure only one person works on the analysis at a time'
+        ],
+        answerIndex: 0,
+        explanation: 'Snapshots provide a reproducible baseline so collaboration stays in sync.'
       }
     ]
   }
 ];
+
+function shuffleArray<T>(input: T[]): T[] {
+  const array = [...input];
+  for (let index = array.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [array[index], array[swapIndex]] = [array[swapIndex], array[index]];
+  }
+  return array;
+}
+
+const shuffleQuizQuestions = (quiz: QuizQuestion[]): QuizQuestion[] => {
+  return quiz.map((question) => {
+    const shuffledOptions = shuffleArray(
+      question.options.map((option, optionIndex) => ({ option, optionIndex }))
+    );
+    const answerIndex = shuffledOptions.findIndex(({ optionIndex }) => optionIndex === question.answerIndex);
+
+    return {
+      ...question,
+      options: shuffledOptions.map(({ option }) => option),
+      answerIndex: answerIndex >= 0 ? answerIndex : 0
+    };
+  });
+};
 
 const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -305,7 +455,7 @@ const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const CompletedBadge: React.FC = () => (
-  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+  <span className="inline-flex items-center gap-1 border border-slate-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-200">
     <CheckIcon className="h-3 w-3" />
   </span>
 );
@@ -323,11 +473,51 @@ const DETAIL_MIN_WIDTH = 320;
 const DETAIL_MIN_HEIGHT = 260;
 const DETAIL_MARGIN = 16;
 
-const createDefaultQuizState = (): QuizState => ({
+const createDefaultQuizState = (totalQuestions: number): QuizState => ({
   questionIndex: 0,
-  selectedOptionIndex: null,
-  isSubmitted: false
+  answers: Array.from({ length: Math.max(totalQuestions, 0) }, () => ({
+    selectedOptionIndex: null,
+    isSubmitted: false
+  })),
+  isComplete: false
 });
+
+const ensureQuizStateSize = (state: QuizState | undefined, totalQuestions: number): QuizState => {
+  if (!state) {
+    return createDefaultQuizState(totalQuestions);
+  }
+
+  const safeLength = Math.max(totalQuestions, 0);
+
+  if (state.answers.length === safeLength) {
+    const safeQuestionIndex = Math.min(state.questionIndex, Math.max(safeLength - 1, 0));
+    const computedComplete = safeLength > 0 ? state.answers.every((answer) => answer.isSubmitted) : false;
+
+    if (safeQuestionIndex === state.questionIndex && computedComplete === state.isComplete) {
+      return state;
+    }
+
+    return {
+      questionIndex: safeQuestionIndex,
+      answers: state.answers,
+      isComplete: computedComplete
+    };
+  }
+
+  const answers = Array.from({ length: safeLength }, (_, index) => {
+    const existingAnswer = state.answers[index];
+    return existingAnswer ?? { selectedOptionIndex: null, isSubmitted: false };
+  });
+
+  const safeQuestionIndex = Math.min(state.questionIndex, Math.max(safeLength - 1, 0));
+  const computedComplete = safeLength > 0 ? answers.every((answer) => answer.isSubmitted) : false;
+
+  return {
+    questionIndex: safeQuestionIndex,
+    answers,
+    isComplete: computedComplete
+  };
+};
 
 const EducationOverlay: React.FC<EducationOverlayProps> = ({
   isOpen,
@@ -348,6 +538,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   const [detailPageIndex, setDetailPageIndex] = useState(0);
   const [detailTab, setDetailTab] = useState<'content' | 'quiz'>('content');
   const [quizState, setQuizState] = useState<Record<string, QuizState>>({});
+  const [shuffledQuizzes, setShuffledQuizzes] = useState<Record<string, QuizQuestion[]>>({});
   const detailRef = useRef<HTMLDivElement | null>(null);
   const dragState = useRef<{ offsetX: number; offsetY: number } | null>(null);
   const resizeState = useRef<
@@ -373,6 +564,21 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   }, []);
 
   const selectedTopic = selectedTopicAnchor ? topicMap.get(selectedTopicAnchor) : undefined;
+  const iconButtonClasses = 'inline-flex h-8 w-8 items-center justify-center border border-blue-400 text-blue-200 transition hover:bg-blue-600 hover:text-white';
+
+  const computeDefaultDetailSize = useCallback((): { width: number; height: number } => {
+    if (typeof window === 'undefined') {
+      return { width: DEFAULT_DETAIL_SIZE.width, height: DEFAULT_DETAIL_SIZE.height };
+    }
+
+    const availableWidth = Math.max(window.innerWidth - DETAIL_MARGIN * 2, 120);
+    const availableHeight = Math.max(window.innerHeight - DETAIL_MARGIN * 2, DETAIL_MIN_HEIGHT);
+
+    return {
+      width: Math.min(DEFAULT_DETAIL_SIZE.width, availableWidth),
+      height: availableHeight
+    };
+  }, []);
 
   const isTopicCompleted = useCallback(
     (anchor: string) => completedAnchors.includes(anchor),
@@ -423,15 +629,11 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   useEffect(() => {
     if (selectedTopic && typeof window !== 'undefined') {
       if (detailSize === null) {
-        const availableWidth = Math.max(window.innerWidth - DETAIL_MARGIN * 2, 120);
-        const availableHeight = Math.max(window.innerHeight - DETAIL_MARGIN * 2, 160);
-        const initialWidth = Math.min(DEFAULT_DETAIL_SIZE.width, availableWidth);
-        const initialHeight = Math.min(DEFAULT_DETAIL_SIZE.height, availableHeight);
-        setDetailSize({ width: initialWidth, height: initialHeight });
+        setDetailSize(computeDefaultDetailSize());
       }
 
       if (detailPosition === null) {
-        const width = detailSize?.width ?? Math.min(DEFAULT_DETAIL_SIZE.width, Math.max(window.innerWidth - DETAIL_MARGIN * 2, 120));
+        const width = detailSize?.width ?? computeDefaultDetailSize().width;
         const defaultX = Math.max(DETAIL_MARGIN, window.innerWidth - width - DETAIL_MARGIN);
         setDetailPosition({ x: defaultX, y: DETAIL_MARGIN });
       }
@@ -443,7 +645,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
     if (!selectedTopic && detailSize !== null) {
       setDetailSize(null);
     }
-  }, [selectedTopic, detailPosition, detailSize]);
+  }, [selectedTopic, detailPosition, detailSize, computeDefaultDetailSize]);
 
   useEffect(() => {
     if (!selectedTopic) {
@@ -458,7 +660,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       const availableWidth = Math.max(viewportWidth - DETAIL_MARGIN * 2, 120);
-      const availableHeight = Math.max(viewportHeight - DETAIL_MARGIN * 2, 160);
+  const availableHeight = Math.max(viewportHeight - DETAIL_MARGIN * 2, DETAIL_MIN_HEIGHT);
 
       setDetailSize((prev) => {
         if (!prev) {
@@ -539,8 +741,26 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   };
 
   const handleLearn = (anchor: string) => {
+    setShuffledQuizzes((prev) => {
+      if (!prev[anchor]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[anchor];
+      return next;
+    });
+    setQuizState((prev) => {
+      if (!prev[anchor]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[anchor];
+      return next;
+    });
     setDetailTab('content');
     setDetailPageIndex(0);
+    setDetailSize(null);
+    setDetailPosition(null);
     setSelectedTopicAnchor(anchor);
     setLastSelectedTopicAnchor(anchor);
     onRequestCloseMainOverlay?.();
@@ -548,6 +768,8 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
 
   const handleCloseDetail = () => {
     setDetailTab('content');
+    setDetailSize(null);
+    setDetailPosition(null);
     setSelectedTopicAnchor(null);
   };
 
@@ -562,12 +784,13 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   };
 
   const updateQuizState = useCallback(
-    (anchor: string, updater: (prev: QuizState) => QuizState) => {
+    (anchor: string, totalQuestions: number, updater: (prev: QuizState) => QuizState) => {
       setQuizState((prev) => {
-        const previous = prev[anchor] ?? createDefaultQuizState();
+        const previous = ensureQuizStateSize(prev[anchor], totalQuestions);
+        const nextState = updater(previous);
         return {
           ...prev,
-          [anchor]: updater(previous)
+          [anchor]: ensureQuizStateSize(nextState, totalQuestions)
         };
       });
     },
@@ -581,14 +804,27 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
       }
 
       if (tab === 'quiz') {
-        setQuizState((prev) => {
+        setShuffledQuizzes((prev) => {
           if (prev[selectedTopic.anchor]) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [selectedTopic.anchor]: shuffleQuizQuestions(selectedTopic.quiz)
+          };
+        });
+        setQuizState((prev) => {
+          const totalQuestions = selectedTopic.quiz.length;
+          const existing = prev[selectedTopic.anchor];
+          const ensured = ensureQuizStateSize(existing, totalQuestions);
+
+          if (existing === ensured) {
             return prev;
           }
 
           return {
             ...prev,
-            [selectedTopic.anchor]: createDefaultQuizState()
+            [selectedTopic.anchor]: ensured
           };
         });
       }
@@ -599,26 +835,60 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   );
 
   const handleQuizOptionChange = useCallback(
-    (anchor: string, optionIndex: number) => {
-      updateQuizState(anchor, (prev) => ({
-        ...prev,
-        selectedOptionIndex: optionIndex,
-        isSubmitted: false
-      }));
+    (anchor: string, optionIndex: number, totalQuestions: number) => {
+      updateQuizState(anchor, totalQuestions, (prev) => {
+        if (!prev.answers.length) {
+          return prev;
+        }
+
+        const answers = prev.answers.map((answer, index) => (
+          index === prev.questionIndex
+            ? {
+                selectedOptionIndex: optionIndex,
+                isSubmitted: false
+              }
+            : answer
+        ));
+
+        const isComplete = answers.length > 0 && answers.every((answer) => answer.isSubmitted);
+
+        return {
+          ...prev,
+          answers,
+          isComplete
+        };
+      });
     },
     [updateQuizState]
   );
 
   const handleQuizSubmit = useCallback(
-    (anchor: string) => {
-      updateQuizState(anchor, (prev) => {
-        if (prev.selectedOptionIndex === null) {
+    (anchor: string, totalQuestions: number) => {
+      updateQuizState(anchor, totalQuestions, (prev) => {
+        if (!prev.answers.length) {
           return prev;
         }
 
+        const currentAnswer = prev.answers[prev.questionIndex];
+        if (!currentAnswer || currentAnswer.selectedOptionIndex === null) {
+          return prev;
+        }
+
+        const answers = prev.answers.map((answer, index) => (
+          index === prev.questionIndex
+            ? {
+                ...answer,
+                isSubmitted: true
+              }
+            : answer
+        ));
+
+        const isComplete = answers.length > 0 && answers.every((answer) => answer.isSubmitted);
+
         return {
           ...prev,
-          isSubmitted: true
+          answers,
+          isComplete
         };
       });
     },
@@ -627,20 +897,61 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
 
   const handleQuizNextQuestion = useCallback(
     (anchor: string, totalQuestions: number) => {
-      updateQuizState(anchor, (prev) => {
+      updateQuizState(anchor, totalQuestions, (prev) => {
+        if (!prev.answers.length) {
+          return prev;
+        }
+
         const nextIndex = Math.min(totalQuestions - 1, prev.questionIndex + 1);
         if (nextIndex === prev.questionIndex) {
           return prev;
         }
 
         return {
-          questionIndex: nextIndex,
-          selectedOptionIndex: null,
-          isSubmitted: false
+          ...prev,
+          questionIndex: nextIndex
         };
       });
     },
     [updateQuizState]
+  );
+
+  const handleQuizPreviousQuestion = useCallback(
+    (anchor: string, totalQuestions: number) => {
+      updateQuizState(anchor, totalQuestions, (prev) => {
+        if (!prev.answers.length) {
+          return prev;
+        }
+
+        const previousIndex = Math.max(0, prev.questionIndex - 1);
+        if (previousIndex === prev.questionIndex) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          questionIndex: previousIndex
+        };
+      });
+    },
+    [updateQuizState]
+  );
+
+  const handleQuizRestart = useCallback(
+    (anchor: string, totalQuestions: number) => {
+      setQuizState((prev) => ({
+        ...prev,
+        [anchor]: createDefaultQuizState(totalQuestions)
+      }));
+      const topic = topicMap.get(anchor);
+      if (topic) {
+        setShuffledQuizzes((prev) => ({
+          ...prev,
+          [anchor]: shuffleQuizQuestions(topic.quiz)
+        }));
+      }
+    },
+    [topicMap]
   );
 
   const goToPreviousPage = useCallback(() => {
@@ -828,6 +1139,9 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
   );
 
   const detailCompleted = selectedTopic ? isTopicCompleted(selectedTopic.anchor) : false;
+  const detailIsBookmarked = selectedTopic ? bookmarkedAnchors.includes(selectedTopic.anchor) : false;
+  const activeTopics = topics.filter((topic) => !isTopicCompleted(topic.anchor));
+  const completedTopics = topics.filter((topic) => isTopicCompleted(topic.anchor));
 
   useEffect(() => {
     if (!selectedTopic || detailTab !== 'content') {
@@ -855,12 +1169,42 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
     ? selectedTopic.detail[Math.min(detailPageIndex, totalDetailPages - 1)]
     : null;
   const currentPageDisplay = totalDetailPages === 0 ? 0 : detailPageIndex + 1;
+
+  const activeQuizQuestions = selectedTopic
+    ? shuffledQuizzes[selectedTopic.anchor] ?? selectedTopic.quiz
+    : undefined;
+  const totalQuizQuestions = activeQuizQuestions?.length ?? 0;
+  const rawTopicQuizState = selectedTopic ? quizState[selectedTopic.anchor] : undefined;
   const topicQuizState = selectedTopic
-    ? quizState[selectedTopic.anchor] ?? createDefaultQuizState()
+    ? ensureQuizStateSize(rawTopicQuizState, totalQuizQuestions)
     : undefined;
-  const currentQuizQuestion = selectedTopic && topicQuizState
-    ? selectedTopic.quiz[Math.min(topicQuizState.questionIndex, selectedTopic.quiz.length - 1)]
+  const currentQuestionIndex = topicQuizState
+    ? Math.min(topicQuizState.questionIndex, Math.max(totalQuizQuestions - 1, 0))
+    : 0;
+  const currentAnswerState = topicQuizState?.answers[currentQuestionIndex];
+  const currentQuizQuestion = activeQuizQuestions && totalQuizQuestions > 0
+    ? activeQuizQuestions[currentQuestionIndex]
     : undefined;
+  const currentSelection = currentAnswerState?.selectedOptionIndex ?? null;
+  const isCurrentSubmitted = currentAnswerState?.isSubmitted ?? false;
+  const isCurrentCorrect = Boolean(
+    isCurrentSubmitted &&
+    currentQuizQuestion &&
+    currentSelection !== null &&
+    currentSelection === currentQuizQuestion.answerIndex
+  );
+  const answeredCount = topicQuizState
+    ? topicQuizState.answers.reduce((count, answer) => count + (answer.isSubmitted ? 1 : 0), 0)
+    : 0;
+  const correctCount = topicQuizState && activeQuizQuestions
+    ? topicQuizState.answers.reduce((count, answer, index) => {
+        const quizDefinition = activeQuizQuestions[index];
+        if (!answer || !quizDefinition) {
+          return count;
+        }
+        return count + (answer.isSubmitted && answer.selectedOptionIndex === quizDefinition.answerIndex ? 1 : 0);
+      }, 0)
+    : 0;
 
   if (!isOpen && !selectedTopic) {
     return null;
@@ -873,73 +1217,68 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 sm:p-8"
           style={{ zIndex: 9999 }}
         >
-          <div className="relative mt-8 mb-24 max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-amber-300/40 bg-slate-900/95 shadow-2xl">
+          <div className="relative mt-8 mb-24 max-h-[90vh] w-full max-w-3xl overflow-hidden border border-blue-300/40 bg-slate-900/95 shadow-2xl">
             <button
               type="button"
               onClick={() => {
                 onClose();
               }}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-amber-400 text-lg text-amber-200 transition hover:bg-amber-400 hover:text-slate-950"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center border border-blue-400 text-sm text-blue-200 transition hover:bg-blue-600 hover:text-white"
               aria-label="Close education overlay"
             >
-              X
+              <XIcon className="h-3.5 w-3.5" />
             </button>
-            <div className="no-scrollbar h-full max-h-[90vh] space-y-6 overflow-y-auto p-8 pr-6 text-left text-slate-100">
-              <div className="space-y-2">
-                <p className="text-sm uppercase tracking-[0.4em] text-amber-300">Education Mode</p>
+            <div className="no-scrollbar flex h-full max-h-[90vh] flex-col gap-6 p-8 pr-6 text-left text-slate-100">
+              <header className="flex-none space-y-2">
+                <p className="text-sm uppercase tracking-[0.4em] text-blue-300">Education Mode</p>
                 <h2 className="text-3xl font-semibold">Welcome to the Mango Learning Hub</h2>
                 <p className="text-sm text-slate-300">
                   This guided overlay highlights topics to explore while you experiment inside the workspace. Use it as a
                   quick reference or a starting point for a structured session.
                 </p>
-              </div>
-              <div className="rounded-xl border border-amber-300/30 bg-slate-900/60 p-6">
-                <h3 className="text-lg font-semibold text-amber-200">Bookmarks</h3>
+              </header>
+              <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto">
+                <div className="border border-blue-300/30 bg-slate-900/60 p-6">
+                <h3 className="text-lg font-semibold text-blue-200">Bookmarks</h3>
                 {bookmarkedTopics.length === 0 ? (
                   <p className="mt-2 text-xs text-slate-400">
-                    Tap <span className="font-semibold text-amber-100">Bookmark</span> on any topic to collect it here for quick access.
+                    Tap the <span className="font-semibold text-blue-100">bookmark icon</span> on any topic to collect it here for quick access.
                   </p>
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {bookmarkedTopics.map((topic) => {
                       const completed = isTopicCompleted(topic.anchor);
                       return (
-                        <li key={`bookmark-${topic.anchor}`} className="rounded-lg border border-slate-700/60 bg-slate-800/60 p-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
+                        <li key={`bookmark-${topic.anchor}`} className="relative border border-slate-700/60 bg-slate-800/60 p-3">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBookmark(topic.anchor)}
+                            className={`${iconButtonClasses} absolute top-3 right-3`}
+                            aria-label={`Remove ${topic.title} from bookmarks`}
+                          >
+                            <BookmarkX className="h-4 w-4" />
+                          </button>
+                          <div className="pr-10">
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleLearn(topic.anchor)}
-                                className="text-left text-sm font-medium text-amber-200 transition hover:text-amber-100"
+                                className="text-left text-sm font-medium text-blue-200 transition hover:text-blue-100"
                               >
                                 {topic.title}
                               </button>
-                              <p className="mt-1 text-xs text-slate-400">{topic.description}</p>
+                              {completed && <CompletedBadge />}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveBookmark(topic.anchor)}
-                              className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-300 text-xs text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-                              aria-label={`Remove ${topic.title} from bookmarks`}
-                            >
-                              X
-                            </button>
+                            <p className="mt-1 text-xs text-slate-400">{topic.description}</p>
                           </div>
                           <div className="mt-3 flex flex-wrap items-center gap-2">
                             <div className="flex flex-wrap gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleLearn(topic.anchor)}
-                                className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                                className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-700"
                               >
                                 Learn topic
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleBookmarkToggle(topic.anchor)}
-                                className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-                              >
-                                {bookmarkedAnchors.includes(topic.anchor) ? 'Unbookmark topic' : 'Bookmark topic'}
                               </button>
                               <button
                                 type="button"
@@ -950,75 +1289,118 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                                     handleMarkComplete(topic.anchor);
                                   }
                                 }}
-                                className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                                className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
                               >
                                 {completed ? 'Mark incomplete' : 'Mark complete'}
                               </button>
                             </div>
-                            {completed && (
-                              <div className="ml-auto">
-                                <CompletedBadge />
-                              </div>
-                            )}
                           </div>
                         </li>
                       );
                     })}
                   </ul>
                 )}
-              </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-6">
-                <h3 className="text-lg font-semibold text-amber-200">Concepts</h3>
+                </div>
+                <div className="border border-slate-700 bg-slate-900/60 p-6">
+                  <h3 className="text-lg font-semibold text-blue-200">Concepts</h3>
                 <p className="mb-4 text-xs text-slate-400">
                   Each section links to a concept you can explore. Future updates will include interactive walkthroughs and
                   workspace checkpoints.
                 </p>
-                <ul className="space-y-3">
-                  {topics.map((topic) => {
-                    const completed = isTopicCompleted(topic.anchor);
-                    return (
-                      <li
-                        key={topic.anchor}
-                        className="flex flex-col rounded-lg border border-slate-700/60 bg-slate-800/60 p-4 transition hover:border-amber-300/60"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-base font-medium text-slate-100">{topic.title}</span>
-                          {completed && <CompletedBadge />}
-                        </div>
-                        <p className="mt-1 text-sm text-slate-300">{topic.description}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleLearn(topic.anchor)}
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-                          >
-                            Learn topic
-                          </button>
+                {activeTopics.length === 0 ? (
+                  <p className="text-sm text-slate-400">You've completed every topic in this list. Great work!</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {activeTopics.map((topic) => {
+                      const isBookmarked = bookmarkedAnchors.includes(topic.anchor);
+                      return (
+                        <li
+                          key={topic.anchor}
+                          className="relative flex flex-col border border-slate-700/60 bg-slate-800/60 p-4 transition hover:border-blue-400/60"
+                        >
                           <button
                             type="button"
                             onClick={() => handleBookmarkToggle(topic.anchor)}
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                            className={`${iconButtonClasses} absolute right-4 top-4`}
+                            aria-label={isBookmarked ? `Remove ${topic.title} from bookmarks` : `Bookmark ${topic.title}`}
+                            title={isBookmarked ? 'Unbookmark topic' : 'Bookmark topic'}
                           >
-                            {bookmarkedAnchors.includes(topic.anchor) ? 'Unbookmark topic' : 'Bookmark topic'}
+                            {isBookmarked ? <BookmarkX className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (completed) {
-                                handleMarkIncomplete(topic.anchor);
-                              } else {
-                                handleMarkComplete(topic.anchor);
-                              }
-                            }}
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                          <div className="flex items-center gap-2 pr-10">
+                            <span className="text-base font-medium text-slate-100">{topic.title}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-300">{topic.description}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleLearn(topic.anchor)}
+                              className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-700"
+                            >
+                              Learn topic
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMarkComplete(topic.anchor)}
+                              className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+                            >
+                              Mark complete
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {completedTopics.length > 0 && (
+                  <div className="mt-8 border-t border-slate-700/60 pt-6">
+                    <h4 className="text-base font-semibold text-blue-200">Completed</h4>
+                    <p className="mb-4 mt-1 text-xs text-slate-400">Revisit topics any time or mark them incomplete to move them back into the main list.</p>
+                    <ul className="space-y-3">
+                      {completedTopics.map((topic) => {
+                        const isBookmarked = bookmarkedAnchors.includes(topic.anchor);
+                        return (
+                          <li
+                            key={`completed-${topic.anchor}`}
+                            className="relative flex flex-col border border-slate-500/40 bg-slate-800/60 p-4"
                           >
-                            {completed ? 'Mark incomplete' : 'Mark Complete'}
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                            <button
+                              type="button"
+                              onClick={() => handleBookmarkToggle(topic.anchor)}
+                              className={`${iconButtonClasses} absolute right-4 top-4`}
+                              aria-label={isBookmarked ? `Remove ${topic.title} from bookmarks` : `Bookmark ${topic.title}`}
+                              title={isBookmarked ? 'Unbookmark topic' : 'Bookmark topic'}
+                            >
+                              {isBookmarked ? <BookmarkX className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                            </button>
+                            <div className="flex items-center gap-2 pr-10">
+                              <span className="text-base font-medium text-slate-100">{topic.title}</span>
+                              <CompletedBadge />
+                            </div>
+                            <p className="mt-1 text-sm text-slate-200">{topic.description}</p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleLearn(topic.anchor)}
+                                className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-700"
+                              >
+                                Review topic
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMarkIncomplete(topic.anchor)}
+                                className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+                              >
+                                Mark incomplete
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+                </div>
               </div>
              
             </div>
@@ -1030,7 +1412,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
         <aside
           ref={detailRef}
           tabIndex={0}
-          className="pointer-events-auto fixed z-[5000] flex flex-col rounded-2xl border border-amber-300/40 bg-slate-900/95 p-6 shadow-xl outline-none focus:outline-none"
+          className="pointer-events-auto fixed z-[5000] flex flex-col border border-blue-300/40 bg-slate-900/95 p-6 shadow-xl outline-none focus:outline-none"
           style={{
             top: detailPosition?.y ?? DETAIL_MARGIN,
             left: detailPosition ? detailPosition.x : undefined,
@@ -1052,7 +1434,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               onLostPointerCapture={handleDetailPointerCancel}
               onPointerCancel={handleDetailPointerCancel}
             >
-              <p className="text-xs uppercase tracking-[0.4em] text-amber-300">Focus Topic</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-blue-300">Focus Topic</p>
               <div className="mt-1 flex items-center gap-2">
                 <h3 className="text-2xl font-semibold text-slate-100">{selectedTopic.title}</h3>
                 {detailCompleted && <CompletedBadge />}
@@ -1061,20 +1443,20 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             <button
               type="button"
               onClick={handleCloseDetail}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-400 text-sm text-amber-200 transition hover:bg-amber-400 hover:text-slate-900"
+              className="flex h-8 w-8 items-center justify-center border border-blue-400 text-sm text-blue-200 transition hover:bg-blue-600 hover:text-white"
               aria-label="Close topic details"
             >
-              X
+              <XIcon className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-4 flex gap-2 rounded-full bg-slate-800/60 p-1">
+          <div className="mt-4 flex gap-2 bg-slate-800/60 p-1">
             <button
               type="button"
               onClick={() => handleDetailTabChange('content')}
-              className={`flex-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`flex-1 px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                 detailTab === 'content'
-                  ? 'bg-amber-300 text-slate-900 shadow-sm'
-                  : 'text-amber-200 hover:text-amber-100'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-blue-200 hover:text-blue-100'
               }`}
             >
               Topic Notes
@@ -1082,10 +1464,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             <button
               type="button"
               onClick={() => handleDetailTabChange('quiz')}
-              className={`flex-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`flex-1 px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                 detailTab === 'quiz'
-                  ? 'bg-amber-300 text-slate-900 shadow-sm'
-                  : 'text-amber-200 hover:text-amber-100'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-blue-200 hover:text-blue-100'
               }`}
             >
               Quiz Now
@@ -1114,10 +1496,10 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                           onClick={() => handlePageSelect(pageIndex)}
                           disabled={isActive}
                           aria-current={isActive ? 'page' : undefined}
-                          className={`flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 text-xs font-semibold transition ${
+                          className={`flex h-8 w-8 items-center justify-center border border-blue-400 text-xs font-semibold transition ${
                             isActive
-                              ? 'cursor-default bg-amber-300 text-slate-900 shadow-sm'
-                              : 'text-amber-200 hover:bg-amber-300 hover:text-slate-900'
+                              ? 'cursor-default bg-blue-600 text-white shadow-sm'
+                              : 'text-blue-200 hover:bg-blue-600 hover:text-white'
                           }`}
                         >
                           {pageIndex + 1}
@@ -1128,73 +1510,118 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               </div>
             ) : (
               <div className="flex h-full flex-col text-sm text-slate-200">
-                {currentQuizQuestion ? (
+                {currentQuizQuestion && topicQuizState ? (
                   <>
-                    <p className="text-sm font-semibold text-amber-200">{currentQuizQuestion.question}</p>
-                    <div className="mt-3 flex-1 overflow-y-auto no-scrollbar space-y-2">
-                      {currentQuizQuestion.options.map((option, optionIndex) => {
-                        const checked = topicQuizState?.selectedOptionIndex === optionIndex;
-                        return (
-                          <label
-                            key={`${selectedTopic.anchor}-quiz-option-${optionIndex}`}
-                            className={`flex items-center gap-3 rounded-lg border border-amber-300/30 bg-slate-800/60 p-3 transition ${
-                              checked ? 'border-amber-300/70' : 'hover:border-amber-300/60'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name={`quiz-${selectedTopic.anchor}`}
-                              value={optionIndex}
-                              checked={checked}
-                              onChange={() => handleQuizOptionChange(selectedTopic.anchor, optionIndex)}
-                              className="h-4 w-4 border-amber-300 text-amber-400 focus:ring-amber-400"
-                            />
-                            <span>{option}</span>
-                          </label>
-                        );
-                      })}
+                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-blue-200">
+                      <span>
+                        Question {currentQuestionIndex + 1} of {totalQuizQuestions}
+                      </span>
+                      
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => handleQuizSubmit(selectedTopic.anchor)}
-                        disabled={topicQuizState?.selectedOptionIndex === null || topicQuizState?.isSubmitted}
-                        className={`rounded-full border border-amber-300 px-3 py-1 font-semibold uppercase tracking-wide transition ${
-                          topicQuizState?.selectedOptionIndex === null || topicQuizState?.isSubmitted
-                            ? 'cursor-not-allowed text-slate-500'
-                            : 'text-amber-200 hover:bg-amber-300 hover:text-slate-900'
-                        }`}
-                      >
-                        Check answer
-                      </button>
-                      {topicQuizState?.isSubmitted && topicQuizState.questionIndex < (selectedTopic.quiz.length - 1) && (
+                    <p className="mt-2 text-sm font-semibold text-blue-200">{currentQuizQuestion.question}</p>
+                    <div className="mt-2 flex flex-1 flex-col">
+                      <div className="max-h-64 overflow-y-auto no-scrollbar space-y-2">
+                        {currentQuizQuestion.options.map((option, optionIndex) => {
+                          const isChecked = currentSelection === optionIndex;
+                          const isCorrectOption = isCurrentSubmitted && optionIndex === currentQuizQuestion.answerIndex;
+
+                          return (
+                            <label
+                              key={`${selectedTopic.anchor}-quiz-option-${optionIndex}`}
+                              className={`flex items-center gap-3 border border-blue-300/30 bg-slate-800/60 p-3 transition ${
+                                isChecked ? 'border-blue-400/70' : 'hover:border-blue-400/60'
+                              } ${
+                                isCurrentSubmitted
+                                  ? isCorrectOption
+                                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-50'
+                                    : 'border-rose-500 bg-rose-500/20 text-rose-50'
+                                  : ''
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`quiz-${selectedTopic.anchor}`}
+                                value={optionIndex}
+                                checked={isChecked}
+                                onChange={() => handleQuizOptionChange(selectedTopic.anchor, optionIndex, totalQuizQuestions)}
+                                className="h-4 w-4 border-blue-400 text-blue-500 focus:ring-blue-500"
+                                disabled={isCurrentSubmitted}
+                              />
+                              <span>{option}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 text-xs">
                         <button
                           type="button"
-                          onClick={() => handleQuizNextQuestion(selectedTopic.anchor, selectedTopic.quiz.length)}
-                          className="rounded-full border border-amber-300 px-3 py-1 font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+                          onClick={() => handleQuizSubmit(selectedTopic.anchor, totalQuizQuestions)}
+                          disabled={currentSelection === null || isCurrentSubmitted}
+                          className={`border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide transition ${
+                            currentSelection === null || isCurrentSubmitted
+                              ? 'cursor-not-allowed text-slate-500'
+                              : 'text-blue-200 hover:bg-blue-600 hover:text-white'
+                          }`}
                         >
-                          Next question
+                          Check answer
                         </button>
-                      )}
-                    </div>
-                    {topicQuizState?.isSubmitted && (
-                      <div
-                        className={`mt-3 rounded-lg border p-3 text-xs ${
-                          topicQuizState.selectedOptionIndex === currentQuizQuestion.answerIndex
-                            ? 'border-emerald-400/60 text-emerald-200'
-                            : 'border-amber-400/60 text-amber-200'
-                        }`}
-                      >
-                        <p>
-                          {topicQuizState.selectedOptionIndex === currentQuizQuestion.answerIndex
-                            ? 'Correct! Nice work.'
-                            : 'Not quite. Review the notes and try again.'}
-                        </p>
-                        {currentQuizQuestion.explanation && (
-                          <p className="mt-2 text-[11px] text-slate-300">{currentQuizQuestion.explanation}</p>
+                      </div>
+                      <div className="mt-auto flex flex-col gap-3 text-xs">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {currentQuestionIndex > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleQuizPreviousQuestion(selectedTopic.anchor, totalQuizQuestions)}
+                              className="border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+                            >
+                              Previous question
+                            </button>
+                          )}
+                          {isCurrentSubmitted && currentQuestionIndex < (totalQuizQuestions - 1) && (
+                            <button
+                              type="button"
+                              onClick={() => handleQuizNextQuestion(selectedTopic.anchor, totalQuizQuestions)}
+                              className="border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+                            >
+                              Next question
+                            </button>
+                          )}
+                        </div>
+                        {isCurrentSubmitted && (
+                          <div
+                            className={`border p-3 ${
+                              isCurrentCorrect
+                                ? 'border-emerald-500 bg-emerald-500/20 text-emerald-50'
+                                : 'border-rose-500 bg-rose-500/20 text-rose-50'
+                            }`}
+                          >
+                            <p>
+                              {isCurrentCorrect ? 'Correct! Nice work.' : 'Not quite.'}
+                            </p>
+                            {currentQuizQuestion.explanation && (
+                              <p className="mt-2 text-[11px] text-slate-300">{currentQuizQuestion.explanation}</p>
+                            )}
+                          </div>
+                        )}
+                        {topicQuizState.isComplete && totalQuizQuestions > 0 && (
+                          <div className="flex flex-wrap items-center gap-3 border border-slate-500/60 bg-slate-800/80 p-3 text-slate-100">
+                            <div>
+                              <p className="font-semibold text-slate-100">Quiz complete!</p>
+                              <p className="text-slate-300">
+                                You answered {correctCount} of {totalQuizQuestions} correctly.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleQuizRestart(selectedTopic.anchor, totalQuizQuestions)}
+                              className="ml-auto border border-blue-400 px-3 py-1 font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+                            >
+                              Retake quiz
+                            </button>
+                          </div>
                         )}
                       </div>
-                    )}
+                    </div>
                   </>
                 ) : (
                   <p className="text-sm text-slate-400">Quiz content coming soon.</p>
@@ -1202,14 +1629,16 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
               </div>
             )}
           </div>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleBookmarkToggle(selectedTopic.anchor)}
-              className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-            >
-              {bookmarkedAnchors.includes(selectedTopic.anchor) ? 'Unbookmark' : 'Bookmark'}
-            </button>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {!isOpen && onOpenMainOverlay && (
+              <button
+                type="button"
+                onClick={onOpenMainOverlay}
+                className="border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+              >
+                Home
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -1219,19 +1648,19 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
                   handleMarkComplete(selectedTopic.anchor);
                 }
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
+              className="inline-flex items-center gap-2 border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
             >
               {detailCompleted ? 'Mark incomplete' : 'Mark complete'}
             </button>
-            {!isOpen && onOpenMainOverlay && (
-              <button
-                type="button"
-                onClick={onOpenMainOverlay}
-                className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-300 hover:text-slate-900"
-              >
-                Home
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => handleBookmarkToggle(selectedTopic.anchor)}
+              className="inline-flex items-center justify-center border border-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-blue-600 hover:text-white"
+              aria-label={detailIsBookmarked ? `Remove ${selectedTopic.title} from bookmarks` : `Bookmark ${selectedTopic.title}`}
+              title={detailIsBookmarked ? 'Unbookmark topic' : 'Bookmark topic'}
+            >
+              {detailIsBookmarked ? <BookmarkX className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+            </button>
           </div>
           <div
             className="absolute bottom-1 right-1 h-4 w-4 cursor-se-resize"
@@ -1248,7 +1677,7 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             aria-hidden="true"
           />
           <div
-            className="absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 transform cursor-ew-resize"
+            className="absolute left-1 top-1/2 h-4 w-2 -translate-y-1/2 transform cursor-ew-resize"
             style={{
                 background: `
                 linear-gradient(90deg, transparent 45%, white 45%, white 55%, transparent 55%),
@@ -1261,6 +1690,8 @@ const EducationOverlay: React.FC<EducationOverlayProps> = ({
             onPointerCancel={handleResizePointerUp}
             aria-hidden="true"
             />
+            
+
 
 
         </aside>
